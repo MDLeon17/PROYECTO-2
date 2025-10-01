@@ -1,0 +1,202 @@
+import tkinter as tk
+from tkinter import messagebox
+import sqlite3
+
+DB_PATH = "base_prueba.db"
+
+
+    
+
+def buscar_cliente():
+    # Nueva ventana hija (no crear otro Tk)
+    ventana3 = tk.Toplevel(ventana1)
+    ventana3.title("Buscar paciente por DPI")
+    ventana3.geometry("600x320")
+    ventana3.config(bg="black")
+    ventana3.transient(ventana1)
+
+    # --- Widgets ---
+    tk.Label(ventana3, text="Ingrese el DPI del paciente:", fg="white", bg="black").place(x=20, y=20)
+
+    entry_dpi2 = tk.Entry(ventana3, width=30)
+    entry_dpi2.place(x=20, y=50)
+
+    # Cuadro de texto para mostrar resultado
+    text_resultado = tk.Text(ventana3, width=70, height=10, bg="black", fg="white")
+    text_resultado.place(x=20, y=100)
+
+    def ejecutar_busqueda():
+        dpi_buscar = entry_dpi2.get().strip().upper()
+        if not dpi_buscar:
+            messagebox.showwarning("Falta DPI", "Escribe un DPI para buscar.")
+            return
+
+        try:
+            con = sqlite3.connect(DB_PATH)
+            cur = con.cursor()
+            cur.execute("""
+                SELECT id, nombre, estado, edad, dpi
+                FROM pacientes
+                WHERE dpi = ?
+            """, (dpi_buscar,))
+            fila = cur.fetchone()
+            con.close()
+
+            text_resultado.delete("1.0", tk.END)
+            if fila:
+                # fila = (id, nombre, estado, edad, dpi)
+                texto = (
+                    f"ID: {fila[0]}\n"
+                    f"Nombre: {fila[1]}\n"
+                    f"Estado: {fila[2]}\n"
+                    f"Edad: {fila[3]}\n"
+                    f"DPI: {fila[4]}\n"
+                )
+                text_resultado.insert(tk.END, texto)
+            else:
+                text_resultado.insert(tk.END, "No se encontró ningún paciente con ese DPI.")
+        except Exception as e:
+            messagebox.showerror("Error de BD", str(e))
+
+    # Botón buscar
+    tk.Button(ventana3, text="BUSCAR", command=ejecutar_busqueda).place(x=280, y=47, height=26)
+
+    # Buscar con Enter
+    entry_dpi2.bind("<Return>", lambda _: ejecutar_busqueda())
+
+    # Enfocar al abrir
+    entry_dpi2.focus_set()
+
+
+
+def mostrar_pacientes():
+    ventana2 = tk.Tk()
+    ventana2.geometry("900x400")
+    ventana2.title("holamundo")
+    ventana2.config(bg="black")
+    text_area = tk.Text(ventana2 , width=90, height=10,bg="black",fg="white")
+    text_area.place(x=70, y=40)
+    conexion = sqlite3.connect("base_prueba.db")
+    cursor = conexion.cursor()
+    cursor.execute("SELECT * FROM pacientes")
+    pacientes = cursor.fetchall()
+    conexion.close()
+
+    text_area.delete("1.0", tk.END)
+
+    for p in pacientes:
+        text_area.insert(tk.END, f"ID: {p[0]} | Nombre: {p[1]} | Estado: {p[2]} | Edad: {p[3]} | DPI: {p[4]}\n")
+
+
+
+def init_db():
+    conexion = sqlite3.connect(DB_PATH)
+    cursor = conexion.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pacientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            estado TEXT NOT NULL,
+            edad INTEGER,
+            dpi TEXT UNIQUE
+        )
+    """)
+    conexion.commit()
+    conexion.close()
+
+def agregar_pacientes():
+    nombre = entry_nombre.get().strip().upper()
+    edad_txt = entry_edad.get().strip().upper()
+    dpi = entry_dpi.get().strip().upper()
+    estado = var_estado.get().strip().upper()
+
+    if not nombre:
+        messagebox.showerror("Error", "El nombre es obligatorio.")
+        return
+    if not estado or estado == "SELECCIONA...":
+        messagebox.showerror("Error", "Selecciona un estado del paciente.")
+        return
+    if not edad_txt.isdigit():
+        messagebox.showerror("Error", "La edad debe ser un número entero.")
+        return
+    if not dpi:
+        messagebox.showerror("Error", "El DPI/CUI es obligatorio.")
+        return
+
+    edad = int(edad_txt)
+
+    try:
+        conexion = sqlite3.connect(DB_PATH)
+        cursor = conexion.cursor()
+        cursor.execute(
+            "INSERT INTO pacientes (nombre, estado, edad, dpi) VALUES (?,?,?,?)",
+            (nombre, estado, edad, dpi)
+        )
+        conexion.commit()
+        conexion.close()
+        messagebox.showinfo("Éxito", "Paciente guardado correctamente.")
+
+        entry_nombre.delete(0, tk.END)
+        entry_edad.delete(0, tk.END)
+        entry_dpi.delete(0, tk.END)
+        var_estado.set("SELECCIONA...")
+
+    except sqlite3.IntegrityError as e:
+        messagebox.showerror("Error de BD", f"No se pudo guardar: {e}")
+    except Exception as e:
+        messagebox.showerror("Error inesperado", str(e))
+
+init_db()
+
+ventana1 = tk.Tk()
+ventana1.title("Registro de Pacientes")
+ventana1.geometry("900x320")
+ventana1.config(bg="black")
+
+
+
+lbl_nombre = tk.Label(ventana1, text="NOMBRE PACIENTE", fg="white", bg="black")
+lbl_edad   = tk.Label(ventana1, text="EDAD PACIENTE",  fg="white", bg="black")
+lbl_dpi    = tk.Label(ventana1, text="DPI/CUI",        fg="white", bg="black")
+lbl_estado = tk.Label(ventana1, text="ESTADO PACIENTE",fg="white", bg="black")
+
+entry_nombre = tk.Entry(ventana1)
+entry_edad   = tk.Entry(ventana1)
+entry_dpi    = tk.Entry(ventana1)
+
+var_estado = tk.StringVar(value="")
+opciones_estado = [
+    "ESTADO CRITICO",
+    "URGENCIA GRAVE",
+    "URGENCIA MODERADA",
+    "URGENCIA LEVE",
+    "CONSULTA EXTERNA"
+]
+menu_estado = tk.OptionMenu(ventana1, var_estado, *opciones_estado)
+
+btn_guardar = tk.Button(ventana1, text="CONFIRMAR", command=agregar_pacientes)
+
+lbl_nombre.place(x=40,  y=40)
+entry_nombre.place(x=220, y=40, width=300)
+
+lbl_edad.place(x=40,   y=90)
+entry_edad.place(x=220, y=90, width=120)
+
+lbl_dpi.place(x=40,   y=140)
+entry_dpi.place(x=220, y=140, width=200)
+
+lbl_estado.place(x=40,   y=190)
+menu_estado.place(x=220, y=190, width=220)
+
+btn_guardar.place(x=220, y=240, width=140, height=32)
+
+btn_buscar = tk.Button(ventana1, text="BUSCAR PACIENTES", command=buscar_cliente)
+btn_buscar.place(x=620, y=240, width=180,height=32)
+
+
+
+
+btn_mostrar = tk.Button(ventana1, text="MOSTRAR PACIENTES", command=mostrar_pacientes)
+btn_mostrar.place(x=400, y=240, width=180, height=32)
+
+ventana1.mainloop()
