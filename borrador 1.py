@@ -8,20 +8,16 @@ DB_PATH = "base_prueba.db"
     
 
 def buscar_cliente():
-    # Nueva ventana hija (no crear otro Tk)
     ventana3 = tk.Toplevel(ventana1)
     ventana3.title("Buscar paciente por DPI")
     ventana3.geometry("600x320")
     ventana3.config(bg="black")
     ventana3.transient(ventana1)
-
-    # --- Widgets ---
     tk.Label(ventana3, text="Ingrese el DPI del paciente:", fg="white", bg="black").place(x=20, y=20)
 
     entry_dpi2 = tk.Entry(ventana3, width=30)
     entry_dpi2.place(x=20, y=50)
 
-    # Cuadro de texto para mostrar resultado
     text_resultado = tk.Text(ventana3, width=70, height=10, bg="black", fg="white")
     text_resultado.place(x=20, y=100)
 
@@ -44,7 +40,6 @@ def buscar_cliente():
 
             text_resultado.delete("1.0", tk.END)
             if fila:
-                # fila = (id, nombre, estado, edad, dpi)
                 texto = (
                     f"ID: {fila[0]}\n"
                     f"Nombre: {fila[1]}\n"
@@ -58,13 +53,10 @@ def buscar_cliente():
         except Exception as e:
             messagebox.showerror("Error de BD", str(e))
 
-    # Botón buscar
     tk.Button(ventana3, text="BUSCAR", command=ejecutar_busqueda).place(x=280, y=47, height=26)
 
-    # Buscar con Enter
     entry_dpi2.bind("<Return>", lambda _: ejecutar_busqueda())
 
-    # Enfocar al abrir
     entry_dpi2.focus_set()
 
 
@@ -101,8 +93,26 @@ def init_db():
             dpi TEXT UNIQUE
         )
     """)
+
+     
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS citas_medicas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            paciente_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,
+            hora TEXT NOT NULL,
+            motivo TEXT NOT NULL,
+            estado TEXT DEFAULT 'PROGRAMADA',
+            creado_en TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
+                ON DELETE CASCADE ON UPDATE CASCADE
+        )
+    """)
+
     conexion.commit()
     conexion.close()
+
+  
 
 def agregar_pacientes():
     nombre = entry_nombre.get().strip().upper()
@@ -198,5 +208,6 @@ btn_buscar.place(x=620, y=240, width=180,height=32)
 
 btn_mostrar = tk.Button(ventana1, text="MOSTRAR PACIENTES", command=mostrar_pacientes)
 btn_mostrar.place(x=400, y=240, width=180, height=32)
+
 
 ventana1.mainloop()
