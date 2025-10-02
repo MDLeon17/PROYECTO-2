@@ -84,6 +84,7 @@ def mostrar_pacientes():
 def init_db():
     conexion = sqlite3.connect(DB_PATH)
     cursor = conexion.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON;")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pacientes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
