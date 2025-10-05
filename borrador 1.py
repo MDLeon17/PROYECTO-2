@@ -96,6 +96,62 @@ def buscar_cliente():
     entry_dpi2.bind("<Return>", lambda _: ejecutar_busqueda())
     entry_dpi2.focus_set()
 
+def borrar_paciente():
+    ventana4 = tk.Toplevel(ventana1)
+    ventana4.geometry("900x400")
+    ventana4.title("Borrar Pacientes")
+    ventana4.config(bg="black")
+    
+
+    instrucciones_borrado = tk.Label(ventana4, text="INTRODUZCA EL DPI DEL PACIENTE A BORRAR", fg="white", bg="black")
+    instrucciones_borrado.place(x=20, y= 20)
+
+    borrar_entry = tk.Entry(ventana4)
+    borrar_entry.place(x=20, y=50, width= 280)
+    resultado_text = tk.Text(ventana4, width=35, height=8, bg="black", fg="white")
+    resultado_text.place(x=20, y=100)
+
+    def borrar():
+        buscar_dpi = borrar_entry.get().strip().upper()
+        if not borrar_entry:
+            messagebox.showwarning("FALTA INGRESAR DPI", "ingrese DPI")
+            return
+        try:
+            con = get_conn()
+            cur = con.cursor()
+            cur.execute("SELECT id, nombre FROM pacientes WHERE dpi = %s", (buscar_dpi,))
+            fila = cur.fetchone()
+
+            if not fila:
+                messagebox.showinfo("ERROR", "no se ha encontrado usuario con ese DPI intente de nuevo")
+                con.close()
+                return
+            resultado_text.delete("1.0", tk.END)
+            resultado_text.insert(tk.END, f"Paciente encontrado:\nID: {fila[0]} | Nombre: {fila[1]}\n")
+
+            confirmacion = messagebox.askyesno(
+                "Confirmar borrado",
+                f"¿Seguro que quieres eliminar al paciente '{fila[1]}' con DPI {buscar_dpi}?"
+            )
+            if not confirmacion:
+                con.close()
+                return
+            cur.execute("DELETE FROM pacientes WHERE dpi = %s", (buscar_dpi,))
+            con.commit()
+            con.close()
+
+            messagebox.showinfo("USUSARIO BORRADO", "EXITO PACIENTE CON " f"DPI {buscar_dpi} ELIMINADO")
+
+            resultado_text.insert(tk.END, "CLIENTE ELIMINADO")
+
+        except Exception as e:
+            messagebox.ERROR("error de base de datos ", e)
+
+    btn_borrar_cliente = tk.Button(ventana4, text="BORRAR", command=borrar)
+    btn_borrar_cliente.place(x=20, y=250, width=280, height=30)
+    
+
+
 # ========= UI: Mostrar todos (nueva ventana) =========
 def mostrar_pacientes():
     ventana2 = tk.Toplevel(ventana1)
@@ -204,6 +260,7 @@ menu_estado = tk.OptionMenu(ventana1, var_estado, *opciones_estado)
 btn_guardar = tk.Button(ventana1, text="CONFIRMAR", command=agregar_pacientes)
 btn_buscar  = tk.Button(ventana1, text="BUSCAR PACIENTE", command=buscar_cliente)
 btn_mostrar = tk.Button(ventana1, text="MOSTRAR PACIENTES", command=mostrar_pacientes)
+btn_borrar = tk.Button(ventana1, text="BORRAR PACIENTES", command=borrar_paciente)
 
 # Layout
 lbl_nombre.place(x=40,  y=40)
@@ -221,5 +278,6 @@ menu_estado.place(x=220, y=190, width=220)
 btn_guardar.place(x=220, y=240, width=140, height=32)
 btn_mostrar.place(x=400, y=240, width=180, height=32)
 btn_buscar.place(x=600, y=240, width=180, height=32)
+btn_borrar.place(x=800, y=240, width=180, height=33)
 
 ventana1.mainloop()
