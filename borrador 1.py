@@ -1,20 +1,60 @@
 import tkinter as tk
 from tkinter import messagebox
-import sqlite3
+import psycopg2
+from psycopg2 import sql, errors
 
-DB_PATH = "base_prueba.db"
+PG_CONFIG = {
+    "host": "192.168.0.18",              
+    "port": 5432,
+    "dbname": "base_pruebas_progra_avanzada_1601524",  
+    "user": "postgres",                  
+    "password": "Conejo241207$"
+}
 
+def get_conn():
+    return psycopg2.connect(**PG_CONFIG)
 
-    
+# ========= INIT DB (CREATE TABLES) =========
+def init_db():
+    try:
+        con = get_conn()
+        cur = con.cursor()
+        # Pacientes
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS pacientes (
+                id      SERIAL PRIMARY KEY,
+                nombre  TEXT NOT NULL,
+                estado  TEXT NOT NULL,
+                edad    INTEGER,
+                dpi     TEXT UNIQUE
+            );
+        """)
+        # Citas (sin doctor)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS citas_medicas (
+                id          SERIAL PRIMARY KEY,
+                paciente_id INTEGER NOT NULL REFERENCES pacientes(id) ON DELETE CASCADE ON UPDATE CASCADE,
+                fecha       DATE NOT NULL,
+                hora        TIME NOT NULL,
+                motivo      TEXT NOT NULL,
+                estado      TEXT DEFAULT 'PROGRAMADA',
+                creado_en   TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        con.commit()
+        con.close()
+    except Exception as e:
+        messagebox.showerror("Error de BD", f"No se pudo inicializar la BD:\n{e}")
 
+# ========= UI: Buscar por DPI (nueva ventana) =========
 def buscar_cliente():
     ventana3 = tk.Toplevel(ventana1)
     ventana3.title("Buscar paciente por DPI")
     ventana3.geometry("600x320")
     ventana3.config(bg="black")
     ventana3.transient(ventana1)
-    tk.Label(ventana3, text="Ingrese el DPI del paciente:", fg="white", bg="black").place(x=20, y=20)
 
+    tk.Label(ventana3, text="Ingrese el DPI del paciente:", fg="white", bg="black").place(x=20, y=20)
     entry_dpi2 = tk.Entry(ventana3, width=30)
     entry_dpi2.place(x=20, y=50)
 
@@ -26,14 +66,13 @@ def buscar_cliente():
         if not dpi_buscar:
             messagebox.showwarning("Falta DPI", "Escribe un DPI para buscar.")
             return
-
         try:
-            con = sqlite3.connect(DB_PATH)
+            con = get_conn()
             cur = con.cursor()
             cur.execute("""
                 SELECT id, nombre, estado, edad, dpi
                 FROM pacientes
-                WHERE dpi = ?
+                WHERE dpi = %s
             """, (dpi_buscar,))
             fila = cur.fetchone()
             con.close()
@@ -54,67 +93,36 @@ def buscar_cliente():
             messagebox.showerror("Error de BD", str(e))
 
     tk.Button(ventana3, text="BUSCAR", command=ejecutar_busqueda).place(x=280, y=47, height=26)
-
     entry_dpi2.bind("<Return>", lambda _: ejecutar_busqueda())
-
     entry_dpi2.focus_set()
 
-
-
+# ========= UI: Mostrar todos (nueva ventana) =========
 def mostrar_pacientes():
-    ventana2 = tk.Tk()
+    ventana2 = tk.Toplevel(ventana1)
     ventana2.geometry("900x400")
-    ventana2.title("holamundo")
+    ventana2.title("Listado de pacientes")
     ventana2.config(bg="black")
-    text_area = tk.Text(ventana2 , width=90, height=10,bg="black",fg="white")
+
+    text_area = tk.Text(ventana2, width=90, height=10, bg="black", fg="white")
     text_area.place(x=70, y=40)
-    conexion = sqlite3.connect("base_prueba.db")
-    cursor = conexion.cursor()
-    cursor.execute("SELECT * FROM pacientes")
-    pacientes = cursor.fetchall()
-    conexion.close()
 
-    text_area.delete("1.0", tk.END)
+    try:
+        con = get_conn()
+        cur = con.cursor()
+        cur.execute("SELECT id, nombre, estado, edad, dpi FROM pacientes ORDER BY id DESC;")
+        pacientes = cur.fetchall()
+        con.close()
 
-    for p in pacientes:
-        text_area.insert(tk.END, f"ID: {p[0]} | Nombre: {p[1]} | Estado: {p[2]} | Edad: {p[3]} | DPI: {p[4]}\n")
+        text_area.delete("1.0", tk.END)
+        for p in pacientes:
+            text_area.insert(
+                tk.END,
+                f"ID: {p[0]} | Nombre: {p[1]} | Estado: {p[2]} | Edad: {p[3]} | DPI: {p[4]}\n"
+            )
+    except Exception as e:
+        messagebox.showerror("Error de BD", str(e))
 
-
-
-def init_db():
-    conexion = sqlite3.connect(DB_PATH)
-    cursor = conexion.cursor()
-    cursor.execute("PRAGMA foreign_keys = ON;")
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT NOT NULL,
-            estado TEXT NOT NULL,
-            edad INTEGER,
-            dpi TEXT UNIQUE
-        )
-    """)
-
-     
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS citas_medicas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            paciente_id INTEGER NOT NULL,
-            fecha TEXT NOT NULL,
-            hora TEXT NOT NULL,
-            motivo TEXT NOT NULL,
-            estado TEXT DEFAULT 'PROGRAMADA',
-            creado_en TEXT DEFAULT (datetime('now','localtime')),
-            FOREIGN KEY (paciente_id) REFERENCES pacientes(id)
-                ON DELETE CASCADE ON UPDATE CASCADE
-        )
-    """)
-
-    conexion.commit()
-    conexion.close()
-
-  
-
+# ========= Insertar paciente =========
 def agregar_pacientes():
     nombre = entry_nombre.get().strip().upper()
     edad_txt = entry_edad.get().strip().upper()
@@ -124,7 +132,7 @@ def agregar_pacientes():
     if not nombre:
         messagebox.showerror("Error", "El nombre es obligatorio.")
         return
-    if not estado or estado == "SELECCIONA...":
+    if not estado:
         messagebox.showerror("Error", "Selecciona un estado del paciente.")
         return
     if not edad_txt.isdigit():
@@ -135,36 +143,44 @@ def agregar_pacientes():
         return
 
     edad = int(edad_txt)
-
     try:
-        conexion = sqlite3.connect(DB_PATH)
-        cursor = conexion.cursor()
-        cursor.execute(
-            "INSERT INTO pacientes (nombre, estado, edad, dpi) VALUES (?,?,?,?)",
+        con = get_conn()
+        cur = con.cursor()
+        cur.execute(
+            "INSERT INTO pacientes (nombre, estado, edad, dpi) VALUES (%s, %s, %s, %s)",
             (nombre, estado, edad, dpi)
         )
-        conexion.commit()
-        conexion.close()
-        messagebox.showinfo("Éxito", "Paciente guardado correctamente.")
+        con.commit()
+        con.close()
 
+        messagebox.showinfo("Éxito", "Paciente guardado correctamente.")
         entry_nombre.delete(0, tk.END)
         entry_edad.delete(0, tk.END)
         entry_dpi.delete(0, tk.END)
-        var_estado.set("SELECCIONA...")
-
-    except sqlite3.IntegrityError as e:
-        messagebox.showerror("Error de BD", f"No se pudo guardar: {e}")
+        var_estado.set("")
+    except errors.UniqueViolation:
+        # Para capturar UNIQUE (dpi repetido) se necesita autocommit o rollback
+        try:
+            con.rollback()
+            con.close()
+        except:
+            pass
+        messagebox.showerror("Error de BD", "El DPI ya existe (UNIQUE).")
     except Exception as e:
+        try:
+            con.rollback()
+            con.close()
+        except:
+            pass
         messagebox.showerror("Error inesperado", str(e))
 
+# ========= App =========
 init_db()
 
 ventana1 = tk.Tk()
-ventana1.title("Registro de Pacientes")
+ventana1.title("Registro de Pacientes (PostgreSQL)")
 ventana1.geometry("900x320")
 ventana1.config(bg="black")
-
-
 
 lbl_nombre = tk.Label(ventana1, text="NOMBRE PACIENTE", fg="white", bg="black")
 lbl_edad   = tk.Label(ventana1, text="EDAD PACIENTE",  fg="white", bg="black")
@@ -186,7 +202,10 @@ opciones_estado = [
 menu_estado = tk.OptionMenu(ventana1, var_estado, *opciones_estado)
 
 btn_guardar = tk.Button(ventana1, text="CONFIRMAR", command=agregar_pacientes)
+btn_buscar  = tk.Button(ventana1, text="BUSCAR PACIENTE", command=buscar_cliente)
+btn_mostrar = tk.Button(ventana1, text="MOSTRAR PACIENTES", command=mostrar_pacientes)
 
+# Layout
 lbl_nombre.place(x=40,  y=40)
 entry_nombre.place(x=220, y=40, width=300)
 
@@ -200,15 +219,7 @@ lbl_estado.place(x=40,   y=190)
 menu_estado.place(x=220, y=190, width=220)
 
 btn_guardar.place(x=220, y=240, width=140, height=32)
-
-btn_buscar = tk.Button(ventana1, text="BUSCAR PACIENTES", command=buscar_cliente)
-btn_buscar.place(x=620, y=240, width=180,height=32)
-
-
-
-
-btn_mostrar = tk.Button(ventana1, text="MOSTRAR PACIENTES", command=mostrar_pacientes)
 btn_mostrar.place(x=400, y=240, width=180, height=32)
-
+btn_buscar.place(x=600, y=240, width=180, height=32)
 
 ventana1.mainloop()
