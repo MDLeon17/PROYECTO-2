@@ -4,11 +4,11 @@ import psycopg2
 from psycopg2 import sql, errors
 
 PG_CONFIG = {
-    "host": "192.168.0.18",              
-    "port": 5432,
-    "dbname": "base_pruebas_progra_avanzada_1601524",  
-    "user": "postgres",                  
-    "password": "Conejo241207$"
+    "host": "ep-lucky-hill-ad6ietmz-pooler.c-2.us-east-1.aws.neon.tech",
+    "dbname": "neondb",
+    "user": "neondb_owner",
+    "password": "npg_xcUk0eiJLI1F",
+    "sslmode": "require"
 }
 
 def get_conn():
