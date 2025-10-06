@@ -235,7 +235,7 @@ init_db()
 
 ventana1 = tk.Tk()
 ventana1.title("Registro de Pacientes (PostgreSQL)")
-ventana1.geometry("900x320")
+ventana1.geometry("1000x320")
 ventana1.config(bg="black")
 
 lbl_nombre = tk.Label(ventana1, text="NOMBRE PACIENTE", fg="white", bg="black")
