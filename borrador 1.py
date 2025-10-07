@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox
 import psycopg2
 from psycopg2 import sql, errors
+import smtplib
+from email.mime.text import MIMEText
 
 PG_CONFIG = {
     "host": "ep-lucky-hill-ad6ietmz-pooler.c-2.us-east-1.aws.neon.tech",
@@ -10,6 +12,13 @@ PG_CONFIG = {
     "password": "npg_xcUk0eiJLI1F",
     "sslmode": "require"
 }
+
+#   EMAIL_SETTINGS
+correo_persona = "fnandomendezdleon@gmail.com"
+contraseña_personal = "ggvv ackz yvwm gjys"
+smtpserver = "smtp.gmail.com"
+puerto = 587
+
 
 def get_conn():
     return psycopg2.connect(**PG_CONFIG)
@@ -96,6 +105,7 @@ def buscar_cliente():
     entry_dpi2.bind("<Return>", lambda _: ejecutar_busqueda())
     entry_dpi2.focus_set()
 
+#============================= BORRAR PACIENTE ==============================================
 def borrar_paciente():
     ventana4 = tk.Toplevel(ventana1)
     ventana4.geometry("900x400")
@@ -230,6 +240,57 @@ def agregar_pacientes():
             pass
         messagebox.showerror("Error inesperado", str(e))
 
+# =========== MANDAR EMAIL ============        
+def mandar_email():
+    ventana5 = tk.Toplevel(ventana1)
+    ventana5.config(bg="black")
+    ventana5.geometry("900x600")
+    ventana5.title("ENVIAR CORREO")
+    lbl_correo = tk.Label(ventana5, text="CORREO PACIENTE", fg="white", bg="black")
+    lbl_titulo = tk.Label(ventana5, text="ASUNTO CORREO", fg="white", bg="black")
+    lbl_cuerpo = tk.Label(ventana5, text="CUERPO CORREO", fg="white", bg="black")
+    entry_correo = tk.Entry(ventana5)
+    entry_titulo = tk.Entry(ventana5)
+    entry_cuerpo = tk.Text(ventana5)
+    entry_correo.place(x=150, y=20, width=300)
+    entry_titulo.place(x=150, y= 75, width=300)
+    entry_cuerpo.place(x=20, y=175, width=600, height=300)
+    lbl_correo.place(x=20, y=20)
+    lbl_titulo.place(x=20, y=75)
+    lbl_cuerpo.place(x=20, y=150)
+    
+
+    def email():
+        cuerpo = entry_cuerpo.get("1.0", tk.END).strip()
+        subjet = entry_titulo.get().strip()
+        correo_destino = entry_correo.get().strip()
+        if not cuerpo:
+            messagebox.showerror("ERROR", "EL CUERPO DEL CORREO NO PUEDE ESTAR VACIO")
+            return
+        if "@" not in correo_destino:
+            messagebox.showerror("ERROR", "CORREO INVALIDO")
+            return
+        if not subjet:
+            messagebox.showerror("ERROR", "NECESITAS PONERLE UN TITULO")
+            return
+
+        mensaje = MIMEText(cuerpo)
+        mensaje['from'] = correo_persona
+        mensaje['To'] = correo_destino
+        mensaje['Subject'] = subjet
+
+        try:
+            with smtplib.SMTP(smtpserver, puerto) as server:
+                server.starttls()
+                server.login(correo_persona, contraseña_personal)
+                server.sendmail(correo_persona, correo_destino, mensaje.as_string())
+                messagebox.showinfo("CORREO", "Correo enviado con éxito.")
+        except Exception as e:
+            messagebox.showerror("Error", " Error al enviar el correo:", e)
+
+    btn_enviar = tk.Button(ventana5, text="Enviar correo", command=email, height=5, width=84)
+    btn_enviar.place(x=20, y=500)
+
 # ========= App =========
 init_db()
 
@@ -261,6 +322,7 @@ btn_guardar = tk.Button(ventana1, text="CONFIRMAR", command=agregar_pacientes)
 btn_buscar  = tk.Button(ventana1, text="BUSCAR PACIENTE", command=buscar_cliente)
 btn_mostrar = tk.Button(ventana1, text="MOSTRAR PACIENTES", command=mostrar_pacientes)
 btn_borrar = tk.Button(ventana1, text="BORRAR PACIENTES", command=borrar_paciente)
+btn_mandar_email = tk.Button(ventana1, text="MANDAR CORREO", command=mandar_email)
 
 # Layout
 lbl_nombre.place(x=40,  y=40)
@@ -278,6 +340,7 @@ menu_estado.place(x=220, y=190, width=220)
 btn_guardar.place(x=220, y=240, width=140, height=32)
 btn_mostrar.place(x=400, y=240, width=180, height=32)
 btn_buscar.place(x=600, y=240, width=180, height=32)
-btn_borrar.place(x=800, y=240, width=180, height=33)
+btn_borrar.place(x=800, y=240, width=180, height=32)
+btn_mandar_email.place(x=1000, y= 240, width=180, height=32)
 
 ventana1.mainloop()
