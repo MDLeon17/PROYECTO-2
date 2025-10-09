@@ -183,7 +183,7 @@ def mostrar_pacientes():
         for p in pacientes:
             text_area.insert(
                 tk.END,
-                f"ID: {p[0]} | Nombre: {p[1]} | Estado: {p[2]} | Edad: {p[3]} | DPI: {p[4]}\n"
+                f"ID: {p[0]} | Nombre: {p[1]} | Estado: {p[2]} | Edad: {p[3]} | DPI/NIT: {p[4]}\n"
             )
     except Exception as e:
         messagebox.showerror("Error de BD", str(e))
