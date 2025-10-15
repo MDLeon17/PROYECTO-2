@@ -374,31 +374,182 @@ def menu_principal():
         ventana_principal.destroy()
     except:
         pass
-    menu = tk.Tk()
-    menu.title("MENÚ PRINCIPAL")
-    menu.geometry("400x600")
-    menu.config(bg="#0b1220")
 
-    lbl_titulo = tk.Label(menu, text="MENÚ PRINCIPAL", font=("Arial", 18, "bold"), bg="#0b1220", fg="#CAF0F8")
+    ventana_principal = tk.Tk()
+    ventana_principal.title("MENÚ PRINCIPAL")
+    ventana_principal.geometry("400x600")
+    ventana_principal.config(bg="#0b1220")
+
+    lbl_titulo = tk.Label(
+        ventana_principal, 
+        text="MENÚ PRINCIPAL", 
+        font=("Arial", 18, "bold"), 
+        bg="#0b1220", 
+        fg="#CAF0F8"
+    )
     lbl_titulo.pack(pady=20)
-###########Estos son los botones principales en el menu
-    btn_pacientes = tk.Button(menu, text="PACIENTES", fg="#023E8A", bg="#CAF0F8", width=25, height=2, command=lambda: messagebox.showinfo("PACIENTES", "Aquí irá la lista de pacientes."))
-    btn_calendario = tk.Button(menu, text="CALENDARIO", fg="#023E8A", bg="#CAF0F8", width=25, height=2, command=cita)
-    btn_agendar = tk.Button(menu, text="AGENDAR CITA", fg="#023E8A", bg="#CAF0F8", width=25, height=2, command=cita)
-    btn_correo = tk.Button(menu, text="ENVIAR CORREO", fg="#023E8A", bg="#CAF0F8", width=25, height=2, command=mandar_email)
+
+    # --- BOTONES PRINCIPALES ---
+    btn_pacientes = tk.Button(
+        ventana_principal, 
+        text="PACIENTES", 
+        fg="#023E8A", 
+        bg="#CAF0F8", 
+        width=25, 
+        height=2, 
+        command=ventana_pacientes  # <-- ahora abre la ventana real
+    )
+    btn_calendario = tk.Button(
+        ventana_principal, 
+        text="CALENDARIO", 
+        fg="#023E8A", 
+        bg="#CAF0F8", 
+        width=25, 
+        height=2, 
+        command=cita
+    )
+    btn_agendar = tk.Button(
+        ventana_principal, 
+        text="AGENDAR CITA", 
+        fg="#023E8A", 
+        bg="#CAF0F8", 
+        width=25, 
+        height=2, 
+        command=cita
+    )
+    btn_correo = tk.Button(
+        ventana_principal, 
+        text="ENVIAR CORREO", 
+        fg="#023E8A", 
+        bg="#CAF0F8", 
+        width=25, 
+        height=2, 
+        command=mandar_email
+    )
 
     btn_pacientes.pack(pady=10)
     btn_calendario.pack(pady=10)
     btn_agendar.pack(pady=10)
     btn_correo.pack(pady=10)
-    ############################# boton para agregar pacientes. mas estetico
+
+    # --- BOTÓN "+" PARA AGREGAR PACIENTES ---
     def abrir_agregar():
         agregar_pacientes()
 
-    btn_mas = tk.Button(menu, text="+", font=("Arial", 22, "bold"), fg="#023E8A", bg="#CAF0F8", command=abrir_agregar)
+    btn_mas = tk.Button(
+        ventana_principal, 
+        text="+", 
+        font=("Arial", 22, "bold"), 
+        fg="#023E8A", 
+        bg="#CAF0F8", 
+        command=abrir_agregar
+    )
     btn_mas.place(relx=0.9, rely=0.9, anchor="center", width=60, height=60)
 
-    menu.mainloop()
+    ventana_principal.mainloop()
+
+
+def ventana_pacientes():
+    # Crear ventana
+    ventana = tk.Toplevel()
+    ventana.title("PACIENTES")
+    ventana.geometry("700x500")
+    ventana.config(bg="#0b1220")
+
+    # Label
+    tk.Label(ventana, text="LISTA DE PACIENTES", font=("Arial", 14, "bold"), bg="#0b1220", fg="#CAF0F8").pack(pady=10)
+
+    # Treeview para mostrar pacientes
+    columns = ("id", "nombre", "correo", "edad", "dpi")
+    tree = ttk.Treeview(ventana, columns=columns, show="headings")
+    for col in columns:
+        tree.heading(col, text=col.upper())
+        tree.column(col, width=120)
+    tree.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+
+    # Función para cargar pacientes desde la DB
+    def cargar_pacientes():
+        try:
+            con = get_conn()
+            cur = con.cursor()
+            cur.execute("SELECT id, nombre, correo, edad, dpi FROM pacientes")
+            pacientes = cur.fetchall()
+            con.close()
+
+            # Limpiar treeview
+            for row in tree.get_children():
+                tree.delete(row)
+            
+            # Insertar pacientes
+            for p in pacientes:
+                tree.insert("", tk.END, values=p)
+        except Exception as e:
+            messagebox.showerror("Error DB", f"No se pudo cargar pacientes:\n{e}")
+
+    cargar_pacientes()
+
+    # Función al hacer doble clic en un paciente
+    def abrir_detalle(event):
+        selected_item = tree.selection()
+        if not selected_item:
+            return
+        paciente = tree.item(selected_item)["values"]
+        abrir_detalle_paciente(paciente)
+
+    tree.bind("<Double-1>", abrir_detalle)
+
+###### DETALLE PACIENTE (editable) ######
+
+def abrir_detalle_paciente(paciente):
+    paciente_id, nombre, correo, edad, dpi = paciente
+    ventana = tk.Toplevel()
+    ventana.title(f"Detalle paciente: {nombre}")
+    ventana.geometry("500x500")
+    ventana.config(bg="#0b1220")
+
+    # Campos editables
+    tk.Label(ventana, text="NOMBRE:", bg="#0b1220", fg="#CAF0F8").place(x=20, y=20)
+    entry_nombre = tk.Entry(ventana)
+    entry_nombre.place(x=150, y=20, width=300)
+    entry_nombre.insert(0, nombre)
+
+    tk.Label(ventana, text="CORREO:", bg="#0b1220", fg="#CAF0F8").place(x=20, y=70)
+    entry_correo = tk.Entry(ventana)
+    entry_correo.place(x=150, y=70, width=300)
+    entry_correo.insert(0, correo)
+
+    tk.Label(ventana, text="DPI:", bg="#0b1220", fg="#CAF0F8").place(x=20, y=120)
+    entry_dpi = tk.Entry(ventana)
+    entry_dpi.place(x=150, y=120, width=300)
+    entry_dpi.insert(0, dpi)
+
+    tk.Label(ventana, text=f"EDAD: {edad}", bg="#0b1220", fg="#CAF0F8").place(x=20, y=170)
+
+    # Botón para guardar cambios
+    def guardar_cambios():
+        nuevo_nombre = entry_nombre.get().strip()
+        nuevo_correo = entry_correo.get().strip()
+        nuevo_dpi = entry_dpi.get().strip().upper()
+        if not nuevo_nombre or not nuevo_correo or not nuevo_dpi:
+            messagebox.showwarning("Campos vacíos", "Todos los campos son obligatorios")
+            return
+        try:
+            con = get_conn()
+            cur = con.cursor()
+            cur.execute(
+                "UPDATE pacientes SET nombre=%s, correo=%s, dpi=%s WHERE id=%s",
+                (nuevo_nombre, nuevo_correo, nuevo_dpi, paciente_id)
+            )
+            con.commit()
+            con.close()
+            messagebox.showinfo("Éxito", "Paciente actualizado correctamente")
+            ventana.destroy()
+        except Exception as e:
+            messagebox.showerror("Error DB", f"No se pudo actualizar:\n{e}")
+
+    tk.Button(ventana, text="GUARDAR CAMBIOS", fg="#023E8A", bg="#CAF0F8", command=guardar_cambios).place(x=150, y=220, width=200, height=40)
+
 
 menu_principal() ### cambio por el nuevo menu
+
 
