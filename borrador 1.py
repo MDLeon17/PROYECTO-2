@@ -397,7 +397,7 @@ def menu_principal():
         bg="#CAF0F8",
         width=25,
         height=2,
-        command=ventana_pacientes  # abre ventana de pacientes
+        command=ventana_pacientes 
     )
 
     btn_calendario = tk.Button(
@@ -456,7 +456,7 @@ def ventana_pacientes():
         tree.column(col, width=120)
     tree.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
 
-    # Función para cargar pacientes desde DB
+    # Función para cargar pacientes desde la base de datos
     def cargar_pacientes():
         try:
             con = get_conn()
@@ -473,8 +473,7 @@ def ventana_pacientes():
             messagebox.showerror("Error DB", f"No se pudo cargar pacientes:\n{e}")
 
     cargar_pacientes()
-
-    # Función al hacer doble clic en un paciente
+#doble lcick
     def abrir_detalle(event):
         selected_item = tree.selection()
         if not selected_item:
@@ -483,17 +482,16 @@ def ventana_pacientes():
         abrir_detalle_paciente(paciente)
 
     tree.bind("<Double-1>", abrir_detalle)
-
-    # --- Botón + para agregar pacientes ---
+#boton '+'
     def abrir_agregar():
         agregar_pacientes()
-        cargar_pacientes()  # refresca la lista después de agregar
+        cargar_pacientes() 
 
     btn_mas = tk.Button(ventana, text="+", font=("Arial", 22, "bold"), fg="#023E8A", bg="#CAF0F8", command=abrir_agregar)
     btn_mas.place(relx=0.9, rely=0.9, anchor="center", width=60, height=60)
 
 
-###### DETALLE PACIENTE (editable) ######
+######## edita los datos del paciente
 
 def abrir_detalle_paciente(paciente):
     paciente_id, nombre, correo, edad, dpi = paciente
@@ -545,6 +543,5 @@ def abrir_detalle_paciente(paciente):
     tk.Button(ventana, text="GUARDAR CAMBIOS", fg="#023E8A", bg="#CAF0F8", command=guardar_cambios).place(x=150, y=220, width=200, height=40)
 
 
-menu_principal() ### cambio por el nuevo menu
-
+menu_principal() 
 
