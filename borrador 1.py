@@ -381,72 +381,63 @@ def menu_principal():
     ventana_principal.config(bg="#0b1220")
 
     lbl_titulo = tk.Label(
-        ventana_principal, 
-        text="MENÚ PRINCIPAL", 
-        font=("Arial", 18, "bold"), 
-        bg="#0b1220", 
+        ventana_principal,
+        text="MENÚ PRINCIPAL",
+        font=("Arial", 18, "bold"),
+        bg="#0b1220",
         fg="#CAF0F8"
     )
     lbl_titulo.pack(pady=20)
 
-    # --- BOTONES PRINCIPALES ---
+    # Botones principales del menú
     btn_pacientes = tk.Button(
-        ventana_principal, 
-        text="PACIENTES", 
-        fg="#023E8A", 
-        bg="#CAF0F8", 
-        width=25, 
-        height=2, 
-        command=ventana_pacientes  # <-- ahora abre la ventana real
+        ventana_principal,
+        text="PACIENTES",
+        fg="#023E8A",
+        bg="#CAF0F8",
+        width=25,
+        height=2,
+        command=ventana_pacientes  # abre ventana de pacientes
     )
+
     btn_calendario = tk.Button(
-        ventana_principal, 
-        text="CALENDARIO", 
-        fg="#023E8A", 
-        bg="#CAF0F8", 
-        width=25, 
-        height=2, 
+        ventana_principal,
+        text="CALENDARIO",
+        fg="#023E8A",
+        bg="#CAF0F8",
+        width=25,
+        height=2,
         command=cita
     )
+
     btn_agendar = tk.Button(
-        ventana_principal, 
-        text="AGENDAR CITA", 
-        fg="#023E8A", 
-        bg="#CAF0F8", 
-        width=25, 
-        height=2, 
+        ventana_principal,
+        text="AGENDAR CITA",
+        fg="#023E8A",
+        bg="#CAF0F8",
+        width=25,
+        height=2,
         command=cita
     )
+
     btn_correo = tk.Button(
-        ventana_principal, 
-        text="ENVIAR CORREO", 
-        fg="#023E8A", 
-        bg="#CAF0F8", 
-        width=25, 
-        height=2, 
+        ventana_principal,
+        text="ENVIAR CORREO",
+        fg="#023E8A",
+        bg="#CAF0F8",
+        width=25,
+        height=2,
         command=mandar_email
     )
 
+    # Ubicación de botones
     btn_pacientes.pack(pady=10)
     btn_calendario.pack(pady=10)
     btn_agendar.pack(pady=10)
     btn_correo.pack(pady=10)
 
-    # --- BOTÓN "+" PARA AGREGAR PACIENTES ---
-    def abrir_agregar():
-        agregar_pacientes()
-
-    btn_mas = tk.Button(
-        ventana_principal, 
-        text="+", 
-        font=("Arial", 22, "bold"), 
-        fg="#023E8A", 
-        bg="#CAF0F8", 
-        command=abrir_agregar
-    )
-    btn_mas.place(relx=0.9, rely=0.9, anchor="center", width=60, height=60)
-
     ventana_principal.mainloop()
+
 
 
 def ventana_pacientes():
@@ -455,11 +446,9 @@ def ventana_pacientes():
     ventana.title("PACIENTES")
     ventana.geometry("700x500")
     ventana.config(bg="#0b1220")
-
-    # Label
+    
     tk.Label(ventana, text="LISTA DE PACIENTES", font=("Arial", 14, "bold"), bg="#0b1220", fg="#CAF0F8").pack(pady=10)
 
-    # Treeview para mostrar pacientes
     columns = ("id", "nombre", "correo", "edad", "dpi")
     tree = ttk.Treeview(ventana, columns=columns, show="headings")
     for col in columns:
@@ -467,7 +456,7 @@ def ventana_pacientes():
         tree.column(col, width=120)
     tree.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
 
-    # Función para cargar pacientes desde la DB
+    # Función para cargar pacientes desde DB
     def cargar_pacientes():
         try:
             con = get_conn()
@@ -476,11 +465,8 @@ def ventana_pacientes():
             pacientes = cur.fetchall()
             con.close()
 
-            # Limpiar treeview
             for row in tree.get_children():
                 tree.delete(row)
-            
-            # Insertar pacientes
             for p in pacientes:
                 tree.insert("", tk.END, values=p)
         except Exception as e:
@@ -497,6 +483,15 @@ def ventana_pacientes():
         abrir_detalle_paciente(paciente)
 
     tree.bind("<Double-1>", abrir_detalle)
+
+    # --- Botón + para agregar pacientes ---
+    def abrir_agregar():
+        agregar_pacientes()
+        cargar_pacientes()  # refresca la lista después de agregar
+
+    btn_mas = tk.Button(ventana, text="+", font=("Arial", 22, "bold"), fg="#023E8A", bg="#CAF0F8", command=abrir_agregar)
+    btn_mas.place(relx=0.9, rely=0.9, anchor="center", width=60, height=60)
+
 
 ###### DETALLE PACIENTE (editable) ######
 
