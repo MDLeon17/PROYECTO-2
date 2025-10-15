@@ -60,8 +60,8 @@ def init_db():
         messagebox.showerror("Error de BD", f"No se pudo inicializar la BD:\n{e}")
 
 #   FUNCION AGREGAR PACIENTES Y AGREGARLA EN LA BASE DE DATOS 
-def agregar_pacientes():
-    ventana_agregar_pacientes = tk.Toplevel(ventana_principal)
+def agregar_pacientes(padre):
+    ventana_agregar_pacientes = tk.Toplevel(padre)
     ventana_agregar_pacientes.geometry("900x600")
     ventana_agregar_pacientes.config(bg= "#0b1220")
     ventana_agregar_pacientes.title("AGREGAR PACIENTES")
@@ -441,13 +441,19 @@ def menu_principal():
 
 
 def ventana_pacientes():
-    # Crear ventana
+    # Crear ventana de pacientes
     ventana = tk.Toplevel()
     ventana.title("PACIENTES")
     ventana.geometry("700x500")
     ventana.config(bg="#0b1220")
     
-    tk.Label(ventana, text="LISTA DE PACIENTES", font=("Arial", 14, "bold"), bg="#0b1220", fg="#CAF0F8").pack(pady=10)
+    tk.Label(
+        ventana,
+        text="LISTA DE PACIENTES",
+        font=("Arial", 14, "bold"),
+        bg="#0b1220",
+        fg="#CAF0F8"
+    ).pack(pady=10)
 
     columns = ("id", "nombre", "correo", "edad", "dpi")
     tree = ttk.Treeview(ventana, columns=columns, show="headings")
@@ -473,7 +479,8 @@ def ventana_pacientes():
             messagebox.showerror("Error DB", f"No se pudo cargar pacientes:\n{e}")
 
     cargar_pacientes()
-#doble lcick
+
+    # Doble click para abrir detalle del paciente
     def abrir_detalle(event):
         selected_item = tree.selection()
         if not selected_item:
@@ -482,13 +489,24 @@ def ventana_pacientes():
         abrir_detalle_paciente(paciente)
 
     tree.bind("<Double-1>", abrir_detalle)
-#boton '+'
-    def abrir_agregar():
-        agregar_pacientes()
-        cargar_pacientes() 
 
-    btn_mas = tk.Button(ventana, text="+", font=("Arial", 22, "bold"), fg="#023E8A", bg="#CAF0F8", command=abrir_agregar)
+    # Botón '+' para agregar pacientes
+    def abrir_agregar():
+        agregar_pacientes(ventana)  
+        cargar_pacientes()        
+
+    btn_mas = tk.Button(
+        ventana,
+        text="+",
+        font=("Arial", 22, "bold"),
+        fg="#023E8A",
+        bg="#CAF0F8",
+        command=abrir_agregar
+    )
     btn_mas.place(relx=0.9, rely=0.9, anchor="center", width=60, height=60)
+
+
+
 
 
 ######## edita los datos del paciente
