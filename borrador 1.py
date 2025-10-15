@@ -4,10 +4,9 @@ import psycopg2
 from psycopg2 import sql, errors
 import smtplib
 from email.mime.text import MIMEText
-from tkcalendar import Calendar
+from tkcalendar import Calendar #### Se debe de instalar tkcalendar "pip install tkcalendar"
 from datetime import datetime, date
-
-
+from tkinter import ttk ########
 
 #   DB_settings
 PG_CONFIG = {
@@ -355,17 +354,51 @@ def cita():
 
 init_db()        
 
+"""Se comenta ya que no se usa, queda como referencia"""
+#ventana_principal = tk.Tk()
+#ventana_principal.title("MENU DE OPCIONES")
+#ventana_principal.geometry("300x900")
+#ventana_principal.config(bg="#0b1220")
+#btn_agregar_pacientes = tk.Button(text="AGREGAR PACIENTE", fg="#023E8A",bg="#CAF0F8", command=agregar_pacientes)
+#btn_elimminar_pacientes = tk.Button(text="BORRAR PACIENTES", fg="#023E8A", bg="#CAF0F8", command=borrar_paciente)
+#btn_mandar_email = tk.Button(text="ENVIAR CORREO", fg="#023E8A", bg="#CAF0F8", command=mandar_email)
+#btn_agendar_cita = tk.Button(text="AGENDAR CITA", fg="#023E8A", bg="#CAF0F8", command=cita)
+#btn_agregar_pacientes.place(x=20,y=50, height=50, width=260)
+#btn_elimminar_pacientes.place(x=20, y=150, height=50, width=260)
+#btn_mandar_email.place(x=20, y=250, height=50, width=260)
+#btn_agendar_cita.place(x=20, y=350, height=50, width=260)#
+###### NUEVO MENÚ PRINCIPAL ######
 
-ventana_principal = tk.Tk()
-ventana_principal.title("MENU DE OPCIONES")
-ventana_principal.geometry("300x900")
-ventana_principal.config(bg="#0b1220")
-btn_agregar_pacientes = tk.Button(text="AGREGAR PACIENTE", fg="#023E8A",bg="#CAF0F8", command=agregar_pacientes)
-btn_elimminar_pacientes = tk.Button(text="BORRAR PACIENTES", fg="#023E8A", bg="#CAF0F8", command=borrar_paciente)
-btn_mandar_email = tk.Button(text="ENVIAR CORREO", fg="#023E8A", bg="#CAF0F8", command=mandar_email)
-btn_agendar_cita = tk.Button(text="AGENDAR CITA", fg="#023E8A", bg="#CAF0F8", command=cita)
-btn_agregar_pacientes.place(x=20,y=50, height=50, width=260)
-btn_elimminar_pacientes.place(x=20, y=150, height=50, width=260)
-btn_mandar_email.place(x=20, y=250, height=50, width=260)
-btn_agendar_cita.place(x=20, y=350, height=50, width=260)
-ventana_principal.mainloop()
+def menu_principal():
+    try:
+        ventana_principal.destroy()
+    except:
+        pass
+    menu = tk.Tk()
+    menu.title("MENÚ PRINCIPAL")
+    menu.geometry("400x600")
+    menu.config(bg="#0b1220")
+
+    lbl_titulo = tk.Label(menu, text="MENÚ PRINCIPAL", font=("Arial", 18, "bold"), bg="#0b1220", fg="#CAF0F8")
+    lbl_titulo.pack(pady=20)
+###########Estos son los botones principales en el menu
+    btn_pacientes = tk.Button(menu, text="PACIENTES", fg="#023E8A", bg="#CAF0F8", width=25, height=2, command=lambda: messagebox.showinfo("PACIENTES", "Aquí irá la lista de pacientes."))
+    btn_calendario = tk.Button(menu, text="CALENDARIO", fg="#023E8A", bg="#CAF0F8", width=25, height=2, command=cita)
+    btn_agendar = tk.Button(menu, text="AGENDAR CITA", fg="#023E8A", bg="#CAF0F8", width=25, height=2, command=cita)
+    btn_correo = tk.Button(menu, text="ENVIAR CORREO", fg="#023E8A", bg="#CAF0F8", width=25, height=2, command=mandar_email)
+
+    btn_pacientes.pack(pady=10)
+    btn_calendario.pack(pady=10)
+    btn_agendar.pack(pady=10)
+    btn_correo.pack(pady=10)
+    ############################# boton para agregar pacientes. mas estetico
+    def abrir_agregar():
+        agregar_pacientes()
+
+    btn_mas = tk.Button(menu, text="+", font=("Arial", 22, "bold"), fg="#023E8A", bg="#CAF0F8", command=abrir_agregar)
+    btn_mas.place(relx=0.9, rely=0.9, anchor="center", width=60, height=60)
+
+    menu.mainloop()
+
+menu_principal() ### cambio por el nuevo menu
+
