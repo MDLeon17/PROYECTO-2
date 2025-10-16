@@ -244,7 +244,7 @@ def mandar_email():
     btn_enviar.place(x=20, y=500)
 
 def cita():
-    ventana_cita = tk.Toplevel()
+    ventana_cita = tk.Toplevel(ventana_principal)
     ventana_cita.geometry("500x500")
     ventana_cita.title("AGENDA DE CITAS")
     ventana_cita.config(bg="#0b1220")
