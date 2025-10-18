@@ -155,8 +155,8 @@ def borrar_paciente():
 
     def borrar():
         buscar_dpi = borrar_entry.get().strip().upper()
-        if not borrar_entry:
-            messagebox.showwarning("FALTA INGRESAR DPI", "ingrese DPI")
+        if not buscar_dpi:
+            messagebox.showwarning("FALTA INGRESAR DPI", "Ingrese DPI")
             return
         try:
             con = get_conn()
@@ -187,7 +187,7 @@ def borrar_paciente():
             resultado_text.insert(tk.END, "CLIENTE ELIMINADO")
 
         except Exception as e:
-            messagebox.ERROR("error de base de datos ", e)
+            messagebox.showerror("Error de BD", f"Error de base de datos:\n{e}")
 
     btn_borrar_cliente = tk.Button(ventana_borrar, text="BORRAR",fg="#023E8A",bg="#CAF0F8", command=borrar)
     btn_borrar_cliente.place(x=20, y=250, width=280, height=30)
@@ -237,7 +237,7 @@ def mandar_email():
                 server.sendmail(correo_persona, correo_destino, mensaje.as_string())
                 messagebox.showinfo("CORREO", "Correo enviado con éxito.")
         except Exception as e:
-            messagebox.showerror("Error", " Error al enviar el correo:", e)
+            messagebox.showerror("Error", f"Error al enviar el correo:\n{e}")
 
     btn_enviar = tk.Button(ventana_email, text="Enviar correo", command=email, height=5, width=84, fg="#023E8A", bg="#CAF0F8")
     btn_enviar.place(x=20, y=500)
@@ -379,6 +379,12 @@ def menu_principal():
     ventana_principal.title("MENÚ PRINCIPAL")
     ventana_principal.geometry("400x600")
     ventana_principal.config(bg="#0b1220")
+
+    
+    imagen = tk.PhotoImage(file=r"C:\Users\fnand\Desktop\PROGRA AVANZADA\PROYECTO-2\logo_proyecto.png")
+    imagen_label = tk.Label(ventana_principal, image=imagen, bg="#0b1220")
+    imagen_label.place(x=100, y=200, width=200, height=200)
+
 
     lbl_titulo = tk.Label(
         ventana_principal,
