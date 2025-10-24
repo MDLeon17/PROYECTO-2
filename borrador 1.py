@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from tkcalendar import Calendar #### Se debe de instalar tkcalendar "pip install tkcalendar"
 from datetime import datetime, date
 from tkinter import ttk ########
-
+from pathlib import Path ### SIRVE PARA LA IMAGEN< PARA QUE NO SEA ALMACENADA SOLO EN UNA PC
 #   DB_settings
 PG_CONFIG = {
     "host": "ep-lucky-hill-ad6ietmz-pooler.c-2.us-east-1.aws.neon.tech",
@@ -380,8 +380,8 @@ def menu_principal():
     ventana_principal.geometry("400x600")
     ventana_principal.config(bg="#0b1220")
 
-    
-    imagen = tk.PhotoImage(file=r"C:\Users\fnand\Desktop\PROGRA AVANZADA\PROYECTO-2\logo_proyecto.png")
+    IMAGEN_PATH = Path(__file__).resolve().parent.parent /"PROYECTO-2" / "logo_proyecto.png"
+    imagen = tk.PhotoImage(file=IMAGEN_PATH)
     imagen_label = tk.Label(ventana_principal, image=imagen, bg="#0b1220")
     imagen_label.place(x=100, y=200, width=200, height=200)
 
