@@ -8,6 +8,8 @@ from tkcalendar import Calendar #### Se debe de instalar tkcalendar "pip install
 from datetime import datetime, date
 from tkinter import ttk ########
 from pathlib import Path ### SIRVE PARA LA IMAGEN< PARA QUE NO SEA ALMACENADA SOLO EN UNA PC
+from PIL import Image, ImageTk ## para mover img
+
 #   DB_settings
 PG_CONFIG = {
     "host": "ep-lucky-hill-ad6ietmz-pooler.c-2.us-east-1.aws.neon.tech",
@@ -380,10 +382,33 @@ def menu_principal():
     ventana_principal.geometry("400x600")
     ventana_principal.config(bg="#0b1220")
 
-    IMAGEN_PATH = Path(__file__).resolve().parent.parent /"PROYECTO-2" / "logo_proyecto.png"
-    imagen = tk.PhotoImage(file=IMAGEN_PATH)
-    imagen_label = tk.Label(ventana_principal, image=imagen, bg="#0b1220")
-    imagen_label.place(x=100, y=200, width=200, height=200)
+    IMAGEN_PATH = Path(__file__).resolve().parent.parent / "PROYECTO-2" / "logo_proyecto.png"
+    ventana_ancho = 400
+    ventana_alto  = 600
+    ventana_principal.geometry(f"{ventana_ancho}x{ventana_alto}")
+
+    # Tamaño máximo permitido de img
+    max_w, max_h = 300, 250
+    margen_inferior = 20 
+
+    img_original = Image.open(IMAGEN_PATH)
+    origen_w, origen_h = img_original.size
+    ratio = min(max_w / origen_w, max_h / origen_h, 1.0)  # no agrandar si ya es pequeña
+    new_w = int(origen_w * ratio)
+    new_h = int(origen_h * ratio)
+    img_redimensionada = img_original.resize((new_w, new_h), Image.LANCZOS)
+
+    imagen = ImageTk.PhotoImage(img_redimensionada)
+
+    imagen_label = tk.Label(ventana_principal, image=imagen, bg="#0b1220", bd=0)
+    imagen_label.image = imagen  
+
+
+    x_pos = (ventana_ancho - new_w) // 2
+    y_pos = ventana_alto - new_h - margen_inferior
+
+    imagen_label.place(x=x_pos, y=y_pos)
+
 
 
     lbl_titulo = tk.Label(
