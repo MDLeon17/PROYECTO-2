@@ -541,7 +541,19 @@ def ventana_pacientes():
         bg="#CAF0F8",
         command=abrir_agregar
     )
+    def filtro():
+        agregar_pacientes(ventana)
+        cargar_pacientes()
+    btn_filtro = tk.Button(
+        ventana,
+        text="FILTRO",
+        font=("Arial", 12, "bold"),
+        fg="#023E8A",
+        bg="#CAF0F8",
+        command=filtro
+    )
     btn_mas.place(relx=0.9, rely=0.9, anchor="center", width=60, height=60)
+    btn_filtro.place(relx=0.75, rely=0.9, anchor="center", width=80, height=40)
 
 
 
