@@ -482,78 +482,109 @@ def ventana_pacientes():
     # Crear ventana de pacientes
     ventana = tk.Toplevel()
     ventana.title("PACIENTES")
-    ventana.geometry("700x500")
+    ventana.geometry("750x520")
     ventana.config(bg="#0b1220")
-    
+
+    # ----- Encabezado -----
     tk.Label(
         ventana,
         text="LISTA DE PACIENTES",
         font=("Arial", 14, "bold"),
         bg="#0b1220",
         fg="#CAF0F8"
-    ).pack(pady=10)
+    ).pack(pady=(10, 0))
 
-    columns = ("id", "nombre", "correo", "edad", "dpi")
-    tree = ttk.Treeview(ventana, columns=columns, show="headings")
-    for col in columns:
-        tree.heading(col, text=col.upper())
-        tree.column(col, width=120)
-    tree.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+    # ----- Barra superior: Orden -----
+    barra = tk.Frame(ventana, bg="#0b1220")
+    barra.pack(fill="x", padx=10, pady=10)
 
-    # Función para cargar pacientes desde la base de datos
-    def cargar_pacientes():
-        try:
-            con = get_conn()
-            cur = con.cursor()
-            cur.execute("SELECT id, nombre, correo, edad, dpi FROM pacientes")
-            pacientes = cur.fetchall()
-            con.close()
+    tk.Label(barra, text="Ordenar por:", bg="#0b1220", fg="#CAF0F8").pack(side="left", padx=(0, 8))
 
-            for row in tree.get_children():
-                tree.delete(row)
-            for p in pacientes:
-                tree.insert("", tk.END, values=p)
-        except Exception as e:
-            messagebox.showerror("Error DB", f"No se pudo cargar pacientes:\n{e}")
+    sort_var = tk.StringVar(value="A → Z (Nombre)")
+    combo_sort = ttk.Combobox(
+        barra,
+        textvariable=sort_var,
+        state="readonly",
+        values=["A → Z (Nombre)", "Z → A (Nombre)"]
+    )
+    combo_sort.pack(side="left")
 
-    cargar_pacientes()
-
-    # Doble click para abrir detalle del paciente
-    def abrir_detalle(event):
-        selected_item = tree.selection()
-        if not selected_item:
-            return
-        paciente = tree.item(selected_item)["values"]
-        abrir_detalle_paciente(paciente)
-
-    tree.bind("<Double-1>", abrir_detalle)
-
-    # Botón '+' para agregar pacientes
+    # Botón + (agregar) a la derecha
     def abrir_agregar():
-        agregar_pacientes(ventana)  
-        cargar_pacientes()        
+        agregar_pacientes(ventana)
+        cargar_pacientes()  # recarga con el orden actual
 
     btn_mas = tk.Button(
-        ventana,
+        barra,
         text="+",
-        font=("Arial", 22, "bold"),
+        font=("Arial", 16, "bold"),
         fg="#023E8A",
         bg="#CAF0F8",
         command=abrir_agregar
     )
-    def filtro():
-        agregar_pacientes(ventana)
+    btn_mas.pack(side="right", ipadx=10)
+
+    # ----- Treeview + Scrollbar -----
+    cont_tabla = tk.Frame(ventana, bg="#0b1220")
+    cont_tabla.pack(expand=True, fill="both", padx=10, pady=(0,10))
+
+    columns = ("id", "nombre", "correo", "edad", "dpi")
+    tree = ttk.Treeview(cont_tabla, columns=columns, show="headings", height=16)
+    vsb = ttk.Scrollbar(cont_tabla, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=vsb.set)
+
+    for col in columns:
+        tree.heading(col, text=col.upper())
+        tree.column(col, width=130, anchor="center")
+    tree.column("nombre", width=200, anchor="w")  # un poco más ancho para nombre
+
+    tree.pack(side="left", expand=True, fill="both")
+    vsb.pack(side="right", fill="y")
+
+    # ----- Helpers -----
+    def limpiar_tree():
+        for it in tree.get_children():
+            tree.delete(it)
+
+    def orden_sql():
+        # Mapea el texto del combo a ASC/DESC
+        return "ASC" if "A → Z" in sort_var.get() else "DESC"
+
+    def cargar_pacientes():
+        limpiar_tree()
+        try:
+            con = get_conn()
+            cur = con.cursor()
+            # Ordena insensible a mayúsculas y con desempate por DPI para estabilidad
+            query = f"""
+                SELECT id, nombre, correo, edad, dpi
+                FROM pacientes
+                ORDER BY LOWER(nombre) {orden_sql()}, dpi {orden_sql()};
+            """
+            cur.execute(query)
+            for row in cur.fetchall():
+                tree.insert("", tk.END, values=row)
+            con.close()
+        except Exception as e:
+            messagebox.showerror("Error DB", f"No se pudo cargar pacientes:\n{e}")
+
+    def on_cambio_orden(_evt=None):
         cargar_pacientes()
-    btn_filtro = tk.Button(
-        ventana,
-        text="FILTRO",
-        font=("Arial", 12, "bold"),
-        fg="#023E8A",
-        bg="#CAF0F8",
-        command=filtro
-    )
-    btn_mas.place(relx=0.9, rely=0.9, anchor="center", width=60, height=60)
-    btn_filtro.place(relx=0.75, rely=0.9, anchor="center", width=80, height=40)
+
+    combo_sort.bind("<<ComboboxSelected>>", on_cambio_orden)
+
+    # Doble click: abrir detalle
+    def abrir_detalle(event):
+        sel = tree.selection()
+        if not sel:
+            return
+        paciente = tree.item(sel)["values"]
+        abrir_detalle_paciente(paciente)
+
+    tree.bind("<Double-1>", abrir_detalle)
+
+    # Carga inicial
+    cargar_pacientes()
 
 
 
