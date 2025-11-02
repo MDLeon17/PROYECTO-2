@@ -439,13 +439,13 @@ def menu_principal():
     )
 
     btn_calendario = tk.Button(
-        ventana_principal,
+         ventana_principal,
         text="CALENDARIO",
         fg="#023E8A",
         bg="#CAF0F8",
         width=25,
         height=2,
-        command=cita
+        command=ver_calendario #######################################33
     )
 
     btn_agendar = tk.Button(
@@ -640,6 +640,101 @@ def abrir_detalle_paciente(paciente):
 
     tk.Button(ventana, text="GUARDAR CAMBIOS", fg="#023E8A", bg="#CAF0F8", command=guardar_cambios).place(x=150, y=220, width=200, height=40)
 
+def ver_calendario():
+    ventana_cal = tk.Toplevel()
+    ventana_cal.title("Calendario de Citas")
+    ventana_cal.geometry("700x600") # Más ancho para ver calendario y tabla
+    ventana_cal.config(bg="#0b1220")
+
+    # Usamos un frame para que el calendario se expanda
+    frame_cal = tk.Frame(ventana_cal, bg="#0b1220")
+    frame_cal.pack(pady=10, padx=10, fill="x")
+
+    cal = Calendar(
+        frame_cal,
+        selectmode="day",
+        # Sin mindate, para poder ver días pasados
+        background="#023E8A",
+        foreground="white",
+        headersbackground="#0077B6",
+        normalbackground="#90E0EF",
+        weekendbackground="#48CAE4"
+    )
+    cal.pack(fill="x", expand=True)
+
+    # --- Frame para la Lista de Citas (Treeview) ---
+    frame_citas = tk.Frame(ventana_cal, bg="#0b1220")
+    frame_citas.pack(pady=10, padx=10, fill="both", expand=True)
+
+    tk.Label(frame_citas, text="Citas para el día seleccionado:", bg="#0b1220", fg="#CAF0F8", font=("Arial", 12)).pack(anchor="w", pady=(0,5))
+
+    # Configurar el Treeview
+    columns = ("hora", "paciente")
+    tree_citas = ttk.Treeview(frame_citas, columns=columns, show="headings", height=10)
+    
+    tree_citas.heading("hora", text="Hora")
+    tree_citas.heading("paciente", text="Paciente")
+    
+    tree_citas.column("hora", width=100, anchor="center")
+    tree_citas.column("paciente", width=350, anchor="w")
+    
+    # 
+    vsb = ttk.Scrollbar(frame_citas, orient="vertical", command=tree_citas.yview)
+    tree_citas.configure(yscrollcommand=vsb.set)
+    
+    vsb.pack(side="right", fill="y")
+    tree_citas.pack(side="left", fill="both", expand=True)
+
+    def cargar_citas_del_dia(event=None):
+        # Limpiar widget
+        for item in tree_citas.get_children():
+            tree_citas.delete(item)
+        
+        # 
+        try:
+            fecha_seleccionada_str = cal.get_date()
+            fecha_sql = datetime.strptime(fecha_seleccionada_str, "%m/%d/%y").strftime("%Y-%m-%d")
+        except Exception as e:
+            messagebox.showerror("Error de fecha", f"No se pudo leer la fecha: {e}", parent=ventana_cal)
+            return
+
+        #Consulta a la base
+        try:
+            con = get_conn()
+            cur = con.cursor()
+            
+            # Se obtioene el nombre del paciente con este 
+            query = """
+                SELECT c.hora, p.nombre
+                FROM citas_medicas c
+                JOIN pacientes p ON c.paciente_id = p.id
+                WHERE c.fecha = %s
+                ORDER BY c.hora;
+            """
+            
+            cur.execute(query, (fecha_sql,))
+            citas_encontradas = cur.fetchall()
+            con.close()
+            
+            #para el widget de vista treeview
+            if not citas_encontradas:
+                tree_citas.insert("", tk.END, values=("", "No hay citas programadas"))
+            else:
+                for cita_fila in citas_encontradas:
+                    # Esto es para el formato
+                    """"""""
+                    hora_str = cita_fila[0].strftime("%H:%M")
+                    nombre_paciente = cita_fila[1]
+                    tree_citas.insert("", tk.END, values=(hora_str, nombre_paciente))
+                    
+        except Exception as e:
+            messagebox.showerror("Error de BD", f"No se pudo cargar las citas:\n{e}", parent=ventana_cal)
+    
+    ### esto es para poder vincular el dia seleccionado con las citas 
+    cal.bind("<<CalendarSelected>>", cargar_citas_del_dia)
+    
+    #para cargar citas
+    cargar_citas_del_dia()
 
 menu_principal() 
 
