@@ -635,8 +635,7 @@ def ventana_pacientes():
     for col in columns:
         tree.heading(col, text=col.upper())
         tree.column(col, width=130, anchor="center")
-    tree.column("nombre", width=200, anchor="w")  # un poco más ancho para nombre
-
+    tree.column("nombre", width=200, anchor="w")  
     tree.pack(side="left", expand=True, fill="both")
     vsb.pack(side="right", fill="y")
 
