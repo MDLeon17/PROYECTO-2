@@ -35,8 +35,11 @@ contraseña_personal = "ggvv ackz yvwm gjys"
 smtpserver = "smtp.gmail.com"
 puerto = 587
 
+
 def get_conn():
     return psycopg2.connect(**PG_CONFIG)
+
+
 
 # ========= INIT DB (CREATE TABLES) =========
 def init_db():
@@ -150,6 +153,9 @@ def agregar_pacientes(padre):
     btn_guardar = tk.Button(ventana_agregar_pacientes, text="GUARDAR PACIENTE", fg="#023E8A", bg="#CAF0F8", command=agregar)
     btn_guardar.place(x=350, y=450, height=40, width=200)
 
+
+HORAS_LABORALES = ["14:15", "15:15", "16:15", "17:15", "18:15"]
+
 def borrar_paciente():
     ventana_borrar = tk.Toplevel()
     ventana_borrar.geometry("325x400")
@@ -254,15 +260,25 @@ def mandar_email():
     btn_enviar = tk.Button(ventana_email, text="Enviar correo", command=email, height=5, width=84, fg="#023E8A", bg="#CAF0F8")
     btn_enviar.place(x=20, y=500)
 
-def cita():
-    ventana_cita = tk.Toplevel()
-    ventana_cita.geometry("500x500")
-    ventana_cita.title("AGENDA DE CITAS")
-    ventana_cita.config(bg="#0b1220")
+#### cambio del boton de agendar cita, se agrega menu desplegable 
+def agendar_cita_nueva():
+    ventana_agendar = tk.Toplevel()
+    ventana_agendar.title("Agendar Nueva Cita")
+    ventana_agendar.geometry("750x550")
+    ventana_agendar.config(bg="#0b1220")
 
-    # --- Calendario ---
+    paciente_map = {} 
+
+    frame_izquierdo = tk.Frame(ventana_agendar, bg="#0b1220", width=400, height=500)
+    frame_derecho = tk.Frame(ventana_agendar, bg="#0b1220", width=300, height=500)
+    
+    frame_izquierdo.pack(side="left", fill="y", padx=20, pady=20)
+    frame_derecho.pack(side="right", fill="both", expand=True, padx=20, pady=20)
+    frame_izquierdo.pack_propagate(False) 
+
+    tk.Label(frame_izquierdo, text="1. Seleccione el Día", bg="#0b1220", fg="#CAF0F8", font=("Arial", 14)).pack(pady=(0, 10))
     cal = Calendar(
-        ventana_cita,
+        frame_izquierdo,
         selectmode="day",
         mindate=date.today(),
         background="#023E8A",
@@ -271,98 +287,181 @@ def cita():
         normalbackground="#90E0EF",
         weekendbackground="#48CAE4"
     )
-    cal.pack(pady=10)
+    cal.pack(fill="x", expand=True)
 
-    # --- Entradas ---
-    lbl_dpi_paciente = tk.Label(ventana_cita, text="DPI DEL PACIENTE:", bg="#0b1220", fg="#CAF0F8")
-    lbl_hora = tk.Label(ventana_cita, text="Hora (HH:MM):", bg="#0b1220", fg="#CAF0F8")
-    entry_dpi_paciente = tk.Entry(ventana_cita)
-    entry_hora = tk.Entry(ventana_cita)
+    tk.Label(frame_derecho, text="2. Seleccione el Paciente", bg="#0b1220", fg="#CAF0F8", font=("Arial", 14)).pack(pady=(10, 10), anchor="w")
+    
+    frame_paciente = tk.Frame(frame_derecho, bg="#0b1220")
+    frame_paciente.pack(fill="x", pady=5)
+    
+    combo_pacientes = ttk.Combobox(frame_paciente, state="readonly", width=35, font=("Arial", 12))
+    combo_pacientes.pack(side="left", fill="x", expand=True)
 
-    lbl_dpi_paciente.place(x=20, y=300)
-    entry_dpi_paciente.place(x=200, y=300, width=200)
-    lbl_hora.place(x=20, y=350)
-    entry_hora.place(x=200, y=350, width=200)
+    btn_agregar_pac = tk.Button(
+        frame_paciente, text="+", 
+        font=("Arial", 14, "bold"), 
+        fg="#023E8A", bg="#CAF0F8",
+        width=3
+    )
+    btn_agregar_pac.pack(side="right", padx=(10, 0))
 
-    # --- Botón guardar ---
-    def guardar_cita():
-        fecha_seleccionada = cal.get_date()
-        hora = entry_hora.get().strip()
-        dpi_paciente = entry_dpi_paciente.get().strip().upper()
+    tk.Label(frame_derecho, text="3. Seleccione la Hora Disponible", bg="#0b1220", fg="#CAF0F8", font=("Arial", 14)).pack(pady=(20, 10), anchor="w")
+    
+    frame_horas = tk.Frame(frame_derecho)
+    frame_horas.pack(fill="both", expand=True)
+    
+    horas_listbox = tk.Listbox(
+        frame_horas, 
+        selectmode=tk.SINGLE, 
+        font=("Arial", 12), 
+        height=10,
+        bg="#0b1220",
+        fg="#CAF0F8",
+        selectbackground="#0077B6",
+        selectforeground="white"
+    )
+    
+    sb_horas = ttk.Scrollbar(frame_horas, orient="vertical", command=horas_listbox.yview)
+    horas_listbox.configure(yscrollcommand=sb_horas.set)
+    
+    sb_horas.pack(side="right", fill="y")
+    horas_listbox.pack(side="left", fill="both", expand=True)
 
-        # Validaciones
-        if not hora:
-            messagebox.showwarning("Hora faltante", "Por favor, ingrese una hora (HH:MM).")
-            return
-        if not dpi_paciente:
-            messagebox.showwarning("DPI faltante", "Por favor, ingrese el DPI del paciente.")
-            return
-        try:
-            datetime.strptime(hora, "%H:%M")
-        except ValueError:
-            messagebox.showwarning("Formato inválido", "Ingrese la hora en formato HH:MM (24 horas).")
-            return
+    btn_guardar = tk.Button(
+        frame_derecho, text="GUARDAR CITA", 
+        command=lambda: guardar_nueva_cita(),
+        bg="#CAF0F8", fg="#023E8A", 
+        font=("Arial", 12, "bold"),
+        height=2
+    )
+    btn_guardar.pack(side="bottom", fill="x", pady=(20, 0))
 
-        fecha_sql = datetime.strptime(fecha_seleccionada, "%m/%d/%y").strftime("%Y-%m-%d")
 
-        # Verificar paciente
+    def cargar_pacientes_combobox():
+        nonlocal paciente_map # Necesario para modificar el mapa de la función exterior
+        paciente_map.clear()
+        
         try:
             con = get_conn()
             cur = con.cursor()
-            cur.execute("SELECT id, nombre FROM pacientes WHERE dpi = %s", (dpi_paciente,))
-            paciente = cur.fetchone()
+            cur.execute("SELECT id, nombre FROM pacientes ORDER BY nombre ASC")
+            pacientes_db = cur.fetchall()
+            con.close()
+            
+            nombres_pacientes = []
+            for pac_id, pac_nombre in pacientes_db:
+                nombres_pacientes.append(pac_nombre)
+                paciente_map[pac_nombre] = pac_id
+            
+            combo_pacientes['values'] = nombres_pacientes
+            if nombres_pacientes:
+                combo_pacientes.set(nombres_pacientes[0]) 
+            else:
+                combo_pacientes.set("No hay pacientes registrados")
+                
+        except Exception as e:
+            messagebox.showerror("Error DB", f"No se pudieron cargar pacientes:\n{e}", parent=ventana_agendar)
 
-            if not paciente:
-                messagebox.showerror("Paciente no encontrado", "No existe ningún paciente con ese DPI.")
-                con.close()
-                return
+    def actualizar_horas_disponibles(event=None):
+        horas_listbox.delete(0, tk.END) 
+        
+        try:
+            fecha_seleccionada_str = cal.get_date()
+            fecha_sql = datetime.strptime(fecha_seleccionada_str, "%m/%d/%y").strftime("%Y-%m-%d")
+        except Exception as e:
+            messagebox.showerror("Error de fecha", f"No se pudo leer la fecha: {e}", parent=ventana_agendar)
+            return
 
-            paciente_id, nombre_paciente = paciente
+        try:
+            con = get_conn()
+            cur = con.cursor()
+            cur.execute("SELECT hora FROM citas_medicas WHERE fecha = %s", (fecha_sql,))
+            horas_ocupadas_raw = cur.fetchall() 
+            con.close()
+            
+            horas_ocupadas = {h[0].strftime("%H:%M") for h in horas_ocupadas_raw}
 
-            # Generar código único de cita (3 letras nombre + día)
-            iniciales = nombre_paciente.strip().upper()[:3]
-            dia = datetime.strptime(fecha_seleccionada, "%m/%d/%y").day
-            codigo_cita = f"{iniciales}{dia:02d}"
+            horas_disponibles_count = 0
+            for hora_laboral in HORAS_LABORALES:
+                if hora_laboral not in horas_ocupadas:
+                    horas_listbox.insert(tk.END, hora_laboral)
+                    horas_disponibles_count += 1
+            
+            if horas_disponibles_count == 0:
+                horas_listbox.insert(tk.END, "No hay horas disponibles")
+                
+        except Exception as e:
+            messagebox.showerror("Error DB", f"No se pudieron cargar las horas:\n{e}", parent=ventana_agendar)
+            
+    def abrir_ventana_agregar_paciente():
+        agregar_pacientes(ventana_agendar) 
+        cargar_pacientes_combobox() 
 
-            # Confirmación
-            confirmar = messagebox.askyesno(
-                "CONFIRMAR CITA",
-                f"¿Desea agendar la cita?\n\n"
-                f"Paciente: {nombre_paciente}\n"
-                f"Fecha: {fecha_sql}\n"
-                f"Hora: {hora}\n"
-                f"Código: {codigo_cita}"
-            )
-            if not confirmar:
-                con.close()
-                return
+    def guardar_nueva_cita():
+        nombre_paciente_sel = combo_pacientes.get()
+        if not nombre_paciente_sel or nombre_paciente_sel not in paciente_map:
+            messagebox.showwarning("Paciente no válido", "Por favor, seleccione un paciente de la lista.", parent=ventana_agendar)
+            return
+        
+        paciente_id = paciente_map[nombre_paciente_sel]
 
-            # Guardar cita
+        try:
+            hora_seleccionada = horas_listbox.get(horas_listbox.curselection())
+            if not ":" in hora_seleccionada: 
+                raise tk.TclError
+        except (tk.TclError, IndexError):
+            messagebox.showwarning("Hora no válida", "Por favor, seleccione una hora disponible de la lista.", parent=ventana_agendar)
+            return
+            
+        fecha_sel_str = cal.get_date()
+        fecha_dt = datetime.strptime(fecha_sel_str, "%m/%d/%y")
+        fecha_sql = fecha_dt.strftime("%Y-%m-%d")
+
+        iniciales = nombre_paciente_sel.strip().upper()[:3]
+        dia = fecha_dt.day
+        codigo_cita = f"{iniciales}{dia:02d}"
+
+        confirmar = messagebox.askyesno(
+            "Confirmar Cita",
+            f"¿Desea agendar la cita?\n\n"
+            f"Paciente: {nombre_paciente_sel}\n"
+            f"Fecha: {fecha_sql}\n"
+            f"Hora: {hora_seleccionada}\n"
+            f"Código: {codigo_cita}",
+            parent=ventana_agendar
+        )
+        if not confirmar:
+            return
+
+        try:
+            con = get_conn()
+            cur = con.cursor()
             cur.execute(
                 "INSERT INTO citas_medicas (paciente_id, fecha, hora, motivo, codigo_cita) VALUES (%s, %s, %s, %s, %s)",
-                (paciente_id, fecha_sql, hora, "Cita general", codigo_cita)
+                (paciente_id, fecha_sql, hora_seleccionada, "Cita de terapia", codigo_cita)
             )
             con.commit()
             con.close()
-
-            messagebox.showinfo("Éxito", f"Cita agendada correctamente.\nCódigo: {codigo_cita}")
-            entry_dpi_paciente.delete(0, tk.END)
-            entry_hora.delete(0, tk.END)
-
+            
+            messagebox.showinfo("Éxito", f"Cita agendada correctamente.\nCódigo: {codigo_cita}", parent=ventana_agendar)
+            
+            actualizar_horas_disponibles()
+            combo_pacientes.set('')
+            
+        except errors.UniqueViolation:
+            con.rollback()
+            con.close()
+            messagebox.showerror("Error Cita", f"El código de cita '{codigo_cita}' ya existe para otra cita.", parent=ventana_agendar)
         except Exception as e:
-            messagebox.showerror("Error de BD", f"Ocurrió un error:\n{e}")
-            try:
-                con.rollback()
-                con.close()
-            except:
-                pass
+            messagebox.showerror("Error de BD", f"Ocurrió un error al guardar:\n{e}", parent=ventana_agendar)
+            try: con.rollback(); con.close()
+            except: pass
 
-    btn_guardar = tk.Button(
-        ventana_cita, text="GUARDAR CITA", command=guardar_cita,
-        bg="#CAF0F8", fg="#023E8A", height=2, width=20
-    )
-    btn_guardar.place(x=150, y=420)
+    cal.bind("<<CalendarSelected>>", actualizar_horas_disponibles)
+    btn_agregar_pac.config(command=abrir_ventana_agregar_paciente)
 
+    cargar_pacientes_combobox()
+    actualizar_horas_disponibles()
 
 init_db()        
 
@@ -466,7 +565,7 @@ def menu_principal():
         bg="#CAF0F8",
         width=25,
         height=2,
-        command=cita
+        command= agendar_cita_nueva
     )
 
     btn_correo = tk.Button(
