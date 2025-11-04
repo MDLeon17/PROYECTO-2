@@ -36,3 +36,9 @@ Para ejecutar este proyecto, es necesario contar con Python  instalado y algunas
 
   Nota: Tkinter es para la interfaz y smtplib para los correos, estos forman parte de la biblioteca estándar de Python.
 
+# configuracion del email
+# Debe modificar los campos que se encuentran despues de "#email settings" con los datos personales del correo para enviar desde la direccion de email deseada
+correo_persona = "su_correo_remitente@gmail.com"
+contraseña_personal = "Contraseña de su correo"
+smtpserver = "smtp.gmail.com"
+puerto = 587
