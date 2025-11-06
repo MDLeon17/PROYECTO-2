@@ -592,7 +592,7 @@ def agendar_cita_nueva() -> None:
 def ventana_pacientes() -> None:
     ventana = tk.Toplevel()
     ventana.title("PACIENTES")
-    ventana.geometry("750x520")
+    ventana.geometry("950x520")
     ventana.config(bg="#0b1220")
 
     tk.Label(
@@ -777,12 +777,14 @@ def ver_calendario() -> None:
         font=("Arial", 12),
     ).pack(anchor="w", pady=(0, 5))
 
-    columns = ("hora", "paciente")
+    columns = ("hora", "paciente","numero")
     tree = ttk.Treeview(frame_citas, columns=columns, show="headings", height=10)
     tree.heading("hora", text="Hora")
     tree.heading("paciente", text="Paciente")
+    tree.heading("numero", text="Telefono")
     tree.column("hora", width=100, anchor="center")
-    tree.column("paciente", width=350, anchor="w")
+    tree.column("paciente", width=250, anchor="w")
+    tree.column("numero", width=100, anchor="w")
 
     vsb = ttk.Scrollbar(frame_citas, orient="vertical", command=tree.yview)
     tree.configure(yscrollcommand=vsb.set)
@@ -807,7 +809,7 @@ def ver_calendario() -> None:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         """
-                        SELECT c.hora, p.nombre
+                        SELECT c.hora, p.nombre, p.numero
                         FROM citas_medicas c
                         JOIN pacientes p ON c.paciente_id = p.id
                         WHERE c.fecha = %s
@@ -823,8 +825,8 @@ def ver_calendario() -> None:
         if not citas:
             tree.insert("", tk.END, values=("", "No hay citas programadas"))
         else:
-            for hora, paciente in citas:
-                tree.insert("", tk.END, values=(hora.strftime("%H:%M"), paciente))
+            for hora, paciente, numero in citas:
+                tree.insert("", tk.END, values=(hora.strftime("%H:%M"), paciente, numero))
 
     cal.bind("<<CalendarSelected>>", cargar_citas_del_dia)
     cargar_citas_del_dia()
