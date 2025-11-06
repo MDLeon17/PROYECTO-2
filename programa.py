@@ -111,6 +111,7 @@ def init_db() -> None:
                         nombre  TEXT NOT NULL,
                         correo  TEXT NOT NULL,
                         edad    INTEGER,
+                        numero  INTEGER,
                         dpi     TEXT UNIQUE
                     );
                     """
@@ -151,6 +152,7 @@ def agregar_pacientes(padre: Optional[tk.Misc]) -> None:
         "nombre": tk.Entry(ventana),
         "edad": tk.Entry(ventana),
         "dpi": tk.Entry(ventana),
+        "numero": tk.Entry(ventana),
         "correo": tk.Entry(ventana),
     }
 
@@ -158,6 +160,7 @@ def agregar_pacientes(padre: Optional[tk.Misc]) -> None:
         "nombre": "NOMBRE DEL PACIENTE  :",
         "edad": "EDAD DEL PACIENTE  :",
         "dpi": "DPI/CUI DEL PACIENTE  :",
+        "numero": "TELEFONO DEL PACIENTE",
         "correo": "CORREO DEL PACIENTE  :",
     }
 
@@ -173,9 +176,11 @@ def agregar_pacientes(padre: Optional[tk.Misc]) -> None:
         nombre = campos["nombre"].get().strip().upper()
         edad = campos["edad"].get().strip()
         dpi = campos["dpi"].get().strip().upper()
-        correo = campos["correo"].get().strip()
+        numero = campos["numero"].get().strip()
+        correo = campos["correo"].get().strip().lower()
 
-        if not all((nombre, edad, dpi, correo)):
+
+        if not all((nombre, edad, dpi, correo, numero)):
             messagebox.showwarning("Campos vacíos", "Por favor, complete todos los campos.")
             return None
         if "@" not in correo or "." not in correo:
@@ -189,18 +194,24 @@ def agregar_pacientes(padre: Optional[tk.Misc]) -> None:
         if edad_int < 0 or edad_int > 120:
             messagebox.showwarning("Edad inválida", "Por favor, ingrese una edad válida.")
             return None
-        return nombre, edad_int, dpi, correo
+        try:
+            numero_int = int(numero)
+        except ValueError:
+            messagebox.showwarning("NUMERO INVALIDO", "Numero invalido intente de nuevo")
+        if numero_int < 10000000:
+            messagebox.showwarning("Numero Invalido", "Recuerda que el telefono tiene 8 digitos")
+        return nombre, edad_int, dpi, correo, numero_int
 
     def guardar() -> None:
         datos = validar_datos()
         if not datos:
             return
-        nombre, edad_int, dpi, correo = datos
+        nombre, edad_int, dpi, correo, numero_int = datos
 
         if not messagebox.askyesno(
             "CONFIRMACION",
             "¿DESEA AGREGAR AL SIGUIENTE PACIENTE?\n\n"
-            f"NOMBRE: {nombre}\nEDAD: {edad_int}\nDPI/CUI: {dpi}\nCORREO: {correo}",
+            f"NOMBRE: {nombre}\nEDAD: {edad_int}\nDPI/CUI: {dpi}\nCORREO: {correo} \nNumero: {numero_int}",
         ):
             return
 
@@ -208,8 +219,8 @@ def agregar_pacientes(padre: Optional[tk.Misc]) -> None:
             with get_conn() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(
-                        "INSERT INTO pacientes (nombre, correo, edad, dpi) VALUES (%s, %s, %s, %s)",
-                        (nombre, correo, edad_int, dpi),
+                        "INSERT INTO pacientes (nombre, correo, edad, numero, dpi) VALUES (%s, %s, %s, %s,%s)",
+                        (nombre, correo, edad_int, numero_int, dpi),
                     )
                 conn.commit()
             messagebox.showinfo("ÉXITO", "PACIENTE AGREGADO EXITOSAMENTE")
@@ -225,7 +236,7 @@ def agregar_pacientes(padre: Optional[tk.Misc]) -> None:
         fg="#023E8A",
         bg="#CAF0F8",
         command=guardar,
-    ).place(x=350, y=450, height=40, width=200)
+    ).place(x=350, y=500, height=40, width=200)
 
 
 def borrar_paciente() -> None:
@@ -622,7 +633,7 @@ def ventana_pacientes() -> None:
     cont_tabla = tk.Frame(ventana, bg="#0b1220")
     cont_tabla.pack(expand=True, fill="both", padx=10, pady=(0, 10))
 
-    columns = ("id", "nombre", "correo", "edad", "dpi")
+    columns = ("id", "nombre", "correo", "edad", "dpi", "numero")
     tree = ttk.Treeview(cont_tabla, columns=columns, show="headings", height=16)
     vsb = ttk.Scrollbar(cont_tabla, orient="vertical", command=tree.yview)
     tree.configure(yscrollcommand=vsb.set)
@@ -649,7 +660,7 @@ def ventana_pacientes() -> None:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         f"""
-                        SELECT id, nombre, correo, edad, dpi
+                        SELECT id, nombre, correo, edad, dpi, numero
                         FROM pacientes
                         ORDER BY LOWER(nombre) {orden_sql()}, dpi {orden_sql()};
                         """
@@ -950,9 +961,7 @@ def ventana_login() -> None:
     login.mainloop()
 
 
-###############################################################################
-# Script entrypoint
-###############################################################################
+
 
 
 if __name__ == "__main__":
