@@ -686,49 +686,92 @@ def ventana_pacientes() -> None:
     cargar_pacientes()
 
 
-def abrir_detalle_paciente(paciente: Tuple[int, str, str, Optional[int], str]) -> None:
-    paciente_id, nombre, correo, edad, dpi = paciente
+def abrir_detalle_paciente(paciente: Tuple[int, str, str, Optional[int], Optional[int], str]) -> None:
+    paciente_id, nombre, correo, edad, dpi, numero = paciente
 
     ventana = tk.Toplevel()
     ventana.title(f"Detalle paciente: {nombre}")
     ventana.geometry("500x500")
     ventana.config(bg="#0b1220")
 
+    # NOMBRE
     tk.Label(ventana, text="NOMBRE:", bg="#0b1220", fg="#CAF0F8").place(x=20, y=20)
     entry_nombre = tk.Entry(ventana)
     entry_nombre.place(x=150, y=20, width=300)
     entry_nombre.insert(0, nombre)
 
+    # CORREO
     tk.Label(ventana, text="CORREO:", bg="#0b1220", fg="#CAF0F8").place(x=20, y=70)
     entry_correo = tk.Entry(ventana)
     entry_correo.place(x=150, y=70, width=300)
     entry_correo.insert(0, correo)
 
-    tk.Label(ventana, text="DPI:", bg="#0b1220", fg="#CAF0F8").place(x=20, y=120)
+    # NUMERO (teléfono)
+    tk.Label(ventana, text="NUMERO:", bg="#0b1220", fg="#CAF0F8").place(x=20, y=120)
+    entry_numero = tk.Entry(ventana)
+    entry_numero.place(x=150, y=120, width=300)
+    entry_numero.insert(0, "" if numero is None else str(numero))
+
+    # DPI
+    tk.Label(ventana, text="DPI:", bg="#0b1220", fg="#CAF0F8").place(x=20, y=170)
     entry_dpi = tk.Entry(ventana)
-    entry_dpi.place(x=150, y=120, width=300)
+    entry_dpi.place(x=150, y=170, width=300)
     entry_dpi.insert(0, dpi)
 
-    tk.Label(ventana, text=f"EDAD: {edad}", bg="#0b1220", fg="#CAF0F8").place(x=20, y=170)
+    # EDAD (solo display)
+    tk.Label(ventana, text=f"EDAD: {'' if edad is None else edad}", bg="#0b1220", fg="#CAF0F8").place(x=20, y=220)
 
     def guardar_cambios() -> None:
-        nuevo_nombre = entry_nombre.get().strip()
-        nuevo_correo = entry_correo.get().strip()
-        nuevo_dpi = entry_dpi.get().strip().upper()
+        nuevo_nombre = entry_nombre.get().strip().upper()
+        nuevo_correo = entry_correo.get().strip().lower()
+        nuevo_numero_s = entry_numero.get().strip()
+        nuevo_dpi = entry_dpi.get().strip()
 
+        # Validaciones básicas
         if not nuevo_nombre or not nuevo_correo or not nuevo_dpi:
-            messagebox.showwarning("Campos vacíos", "Todos los campos son obligatorios")
+            messagebox.showwarning("Campos vacíos", "Nombre, correo y DPI son obligatorios")
             return
+        if "@" not in nuevo_correo or "." not in nuevo_correo:
+            messagebox.showwarning("Correo inválido", "Ingrese un correo válido")
+            return
+
+        # Teléfono: opcional pero si viene, que sea 8 dígitos
+        nuevo_numero_val: Optional[int]
+        if nuevo_numero_s == "":
+            nuevo_numero_val = None
+        else:
+            if not nuevo_numero_s.isdigit():
+                messagebox.showwarning("Número inválido", "El teléfono debe contener solo dígitos")
+                return
+            nuevo_numero_val = int(nuevo_numero_s)
+            if not (10_000_000 <= nuevo_numero_val <= 99_999_999):
+                messagebox.showwarning("Número inválido", "El teléfono debe tener 8 dígitos")
+                return
+
+        # DPI: 13 dígitos, texto
+        if not nuevo_dpi.isdigit() or len(nuevo_dpi) != 13:
+            messagebox.showwarning("DPI inválido", "El DPI debe tener 13 dígitos numéricos")
+            return
+
         try:
             with get_conn() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(
-                        "UPDATE pacientes SET nombre=%s, correo=%s, dpi=%s WHERE id=%s",
-                        (nuevo_nombre, nuevo_correo, nuevo_dpi, paciente_id),
+                        """
+                        UPDATE pacientes
+                           SET nombre = %s,
+                               correo = %s,
+                               numero = %s,
+                               dpi    = %s
+                         WHERE id = %s
+                        """,
+                        (nuevo_nombre, nuevo_correo, nuevo_numero_val, nuevo_dpi, paciente_id),
                     )
                 conn.commit()
             messagebox.showinfo("Éxito", "Paciente actualizado correctamente")
             ventana.destroy()
+        except errors.UniqueViolation:
+            messagebox.showerror("Error DB", "El DPI o correo ya existe (UNIQUE).")
         except Exception as exc:
             messagebox.showerror("Error DB", f"No se pudo actualizar:\n{exc}")
 
@@ -738,8 +781,7 @@ def abrir_detalle_paciente(paciente: Tuple[int, str, str, Optional[int], str]) -
         fg="#023E8A",
         bg="#CAF0F8",
         command=guardar_cambios,
-    ).place(x=150, y=220, width=200, height=40)
-
+    ).place(x=150, y=260, width=200, height=40)
 
 ###############################################################################
 # Calendario
