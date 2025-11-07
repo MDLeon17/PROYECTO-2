@@ -224,6 +224,24 @@ def agregar_pacientes(padre: Optional[tk.Misc]) -> None:
                     )
                 conn.commit()
             messagebox.showinfo("ÉXITO", "PACIENTE AGREGADO EXITOSAMENTE")
+            mensaje = MIMEText(f"Estimado(a) {nombre}\n\n" \
+            "¡Bienvenido(a) a Fisioterapeuta Beatriz!\n" \
+            "Confirmamos que su registro se ha completado con éxito. Para nosotros, usted es nuestra prioridad y estamos comprometidos con brindarle una atención cálida, ética y de calidad.\n\n" \
+            f"Si tiene alguna duda o consulta, puede escribirnos a este correo (correo_contacto) o comunicarse al +502 5515-1614.\n" \
+            "Será un gusto atenderle.\n\n" \
+            "Atentamente,\n" \
+            "Equipo de Fisioterapeuta Beatriz\n" \
+            f"Correo: correo_contacto | Tel.: +502 5515-1614")
+            mensaje["From"] = GMAIL_ACCOUNT
+            mensaje["To"] = correo
+            mensaje["Subject"] = (f"Bienvenido(a) {nombre} a Fisioterapeuta Beatriz")
+            try:
+                with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                    server.starttls()
+                    server.login(GMAIL_ACCOUNT, GMAIL_APP_PASSWORD)
+                    server.sendmail(GMAIL_ACCOUNT, correo, mensaje.as_string())
+            except Exception as exc:
+                messagebox.showerror("Error", f"Error al enviar el correo:\n{exc}")            
             limpiar_campos()
         except errors.UniqueViolation:
             messagebox.showerror("Error de BD", "El DPI ya existe (UNIQUE).")
@@ -370,6 +388,14 @@ def mandar_email() -> None:
 ###############################################################################
 
 
+def get_paciente_email(paciente_id: int) -> Optional[str]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT correo FROM pacientes WHERE id = %s;", (paciente_id,))
+            row = cur.fetchone()
+            return row[0] if row and row[0] else None
+
+
 def agendar_cita_nueva() -> None:
     ventana = tk.Toplevel()
     ventana.title("Agendar Nueva Cita")
@@ -392,10 +418,12 @@ def agendar_cita_nueva() -> None:
         fg="#CAF0F8",
         font=("Arial", 14),
     ).pack(pady=(0, 10))
+
     cal = Calendar(
         frame_izquierdo,
         selectmode="day",
         mindate=date.today(),
+        date_pattern="mm/dd/yyyy",
         background="#023E8A",
         foreground="white",
         headersbackground="#0077B6",
@@ -481,7 +509,7 @@ def agendar_cita_nueva() -> None:
         horas_listbox.delete(0, tk.END)
 
         try:
-            fecha_seleccionada = datetime.strptime(cal.get_date(), "%m/%d/%y")
+            fecha_seleccionada = datetime.strptime(cal.get_date(), "%m/%d/%Y")
         except Exception as exc:
             messagebox.showerror("Error de fecha", f"No se pudo leer la fecha: {exc}", parent=ventana)
             return
@@ -492,7 +520,14 @@ def agendar_cita_nueva() -> None:
             with get_conn() as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT hora FROM citas_medicas WHERE fecha = %s", (fecha_sql,))
-                    horas_ocupadas = {row[0].strftime("%H:%M") for row in cursor.fetchall()}
+                    rows = cursor.fetchall()
+                    horas_ocupadas = set()
+                    for (h,) in rows:
+                    
+                        if hasattr(h, "strftime"):
+                            horas_ocupadas.add(h.strftime("%H:%M"))
+                        else:
+                            horas_ocupadas.add(str(h)[:5])  # "HH:MM"
         except Exception as exc:
             messagebox.showerror("Error DB", f"No se pudieron cargar las horas:\n{exc}", parent=ventana)
             return
@@ -505,8 +540,10 @@ def agendar_cita_nueva() -> None:
                 horas_listbox.insert(tk.END, hora)
 
     def abrir_ventana_agregar_paciente() -> None:
-        agregar_pacientes(ventana)
+        agregar_pacientes(ventana) 
         cargar_pacientes_combobox()
+
+    btn_agregar_pac.config(command=abrir_ventana_agregar_paciente)
 
     def guardar_nueva_cita() -> None:
         nombre_paciente = combo_pacientes.get()
@@ -528,8 +565,14 @@ def agendar_cita_nueva() -> None:
             )
             return
 
-        fecha_sel = datetime.strptime(cal.get_date(), "%m/%d/%y")
+        fecha_sel = datetime.strptime(cal.get_date(), "%m/%d/%Y")
         fecha_sql = fecha_sel.strftime("%Y-%m-%d")
+
+        try:
+            hora_time = datetime.strptime(hora_seleccionada, "%H:%M").time()
+        except ValueError:
+            messagebox.showwarning("Hora no válida", "Formato de hora inválido.", parent=ventana)
+            return
 
         codigo_cita = f"{nombre_paciente.strip().upper()[:3]}{fecha_sel.day:02d}"
 
@@ -552,9 +595,40 @@ def agendar_cita_nueva() -> None:
                         INSERT INTO citas_medicas (paciente_id, fecha, hora, motivo, codigo_cita)
                         VALUES (%s, %s, %s, %s, %s)
                         """,
-                        (paciente_id, fecha_sql, hora_seleccionada, "Cita de terapia", codigo_cita),
+                        (paciente_id, fecha_sql, hora_time, "Cita de terapia", codigo_cita),
                     )
                 conn.commit()
+
+            correo_dest = get_paciente_email(paciente_id)
+            if correo_dest:
+                mensaje = MIMEText(
+                        f"Estimado(a) {nombre_paciente} \n\n" \
+                        "Su cita ha sido calendarizada con éxito.\n\n" \
+                        f"Fecha y hora: {fecha_sql} - {hora_seleccionada}\n" \
+                        "Si tiene alguna duda o necesita reprogramar, comuníquese al +502 5515-1614.\n\n" \
+                        "Atentamente,\n" \
+                        "Equipo de Fisioterapeuta Beatriz"
+                )
+                mensaje["From"] = GMAIL_ACCOUNT
+                mensaje["To"] = correo_dest
+                mensaje["Subject"] = f"Confirmación de cita {nombre_paciente} – Fisioterapeuta Beatriz"
+
+                try:
+                    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                        server.starttls()
+                        server.login(GMAIL_ACCOUNT, GMAIL_APP_PASSWORD)
+                        server.sendmail(GMAIL_ACCOUNT, correo_dest, mensaje.as_string())
+                except Exception as exc:
+                    messagebox.showerror("Error", f"Error al enviar el correo:\n{exc}", parent=ventana)
+            else:
+                messagebox.showinfo(
+                    "Cita guardada",
+                    f"Cita agendada correctamente.\nCódigo: {codigo_cita}\n\n"
+                    "Nota: el paciente no tiene correo registrado.",
+                    parent=ventana,
+                )
+
+            # UI refresh
             messagebox.showinfo("Éxito", f"Cita agendada correctamente.\nCódigo: {codigo_cita}", parent=ventana)
             actualizar_horas_disponibles()
             combo_pacientes.set("")
@@ -567,8 +641,11 @@ def agendar_cita_nueva() -> None:
         except Exception as exc:
             messagebox.showerror("Error de BD", f"Ocurrió un error al guardar:\n{exc}", parent=ventana)
 
+    # Hooks iniciales
     cal.bind("<<CalendarSelected>>", actualizar_horas_disponibles)
-    btn_agregar_pac.config(command=abrir_ventana_agregar_paciente)
+    cargar_pacientes_combobox()
+    actualizar_horas_disponibles()
+
 
     tk.Button(
         frame_derecho,
@@ -1003,8 +1080,6 @@ def ventana_login() -> None:
     login.bind("<Return>", intentar_ingreso)
     entry_password.focus_set()
     login.mainloop()
-
-
 
 
 
