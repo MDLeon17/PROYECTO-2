@@ -16,13 +16,23 @@ from tkcalendar import Calendar
 from tkinter import messagebox, ttk
 import tkinter as tk
 from PIL import Image, ImageTk
+from typing import Any, Callable, List, Dict, Optional
+import unicodedata
 
 
 ###############################################################################
 # Configuration
 ###############################################################################
 
-
+def quick_sort(arr: List[Any], key: Callable[[Any], Any] = lambda x: x) -> List[Any]:
+    if len(arr) <= 1:
+        return arr
+    pivot_key = key(arr[len(arr)//2])
+    left  = [x for x in arr if key(x) < pivot_key]
+    mid   = [x for x in arr if key(x) == pivot_key]
+    right = [x for x in arr if key(x) > pivot_key]
+    return quick_sort(left, key) + mid + quick_sort(right, key)
+    
 def _env_or_default(name: str, default: str) -> str:
     """Return the environment variable value when available."""
 
@@ -582,7 +592,7 @@ def agendar_cita_nueva() -> None:
             f"Paciente: {nombre_paciente}\n"
             f"Fecha: {fecha_sql}\n"
             f"Hora: {hora_seleccionada}\n"
-            f"Código: {codigo_cita}",
+            f"Código: {codigo_cita}", 
             parent=ventana,
         ):
             return
@@ -667,6 +677,39 @@ def agendar_cita_nueva() -> None:
 
 
 def ventana_pacientes() -> None:
+    def _norm_txt(s: Optional[str]) -> str:
+        if s is None:
+            return "\uffff"
+        s = s.lower()
+        s = unicodedata.normalize("NFD", s)
+        return "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+
+    def quick_sort(arr: List[Any], key=lambda x: x) -> List[Any]:
+        if len(arr) <= 1:
+            return arr
+        pivot = key(arr[len(arr)//2])
+        left  = [x for x in arr if key(x) <  pivot]
+        mid   = [x for x in arr if key(x) == pivot]
+        right = [x for x in arr if key(x) >  pivot]
+        return quick_sort(left, key) + mid + quick_sort(right, key)
+
+    def _leer_pacientes_raw() -> List[Dict[str, Any]]:
+        with get_conn() as conn, conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, nombre, correo, edad, dpi, numero
+                FROM pacientes
+            """)
+            cols = [d[0] for d in cursor.description]
+            return [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+    def _key_nombre_az(p):
+        return (_norm_txt(p["nombre"]), _norm_txt(p["dpi"]))
+
+    def _key_nombre_za(p):
+        inv = tuple(chr(0x10FFFF - ord(c)) for c in _norm_txt(p["nombre"]))
+        inv_dpi = tuple(chr(0x10FFFF - ord(c)) for c in _norm_txt(p["dpi"]))
+        return (inv, inv_dpi)
+
     ventana = tk.Toplevel()
     ventana.title("PACIENTES")
     ventana.geometry("950x520")
@@ -727,23 +770,15 @@ def ventana_pacientes() -> None:
         for item in tree.get_children():
             tree.delete(item)
 
-    def orden_sql() -> str:
-        return "ASC" if "A → Z" in sort_var.get() else "DESC"
-
     def cargar_pacientes() -> None:
         limpiar_tree()
         try:
-            with get_conn() as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        f"""
-                        SELECT id, nombre, correo, edad, dpi, numero
-                        FROM pacientes
-                        ORDER BY LOWER(nombre) {orden_sql()}, dpi {orden_sql()};
-                        """
-                    )
-                    for row in cursor.fetchall():
-                        tree.insert("", tk.END, values=row)
+            pacientes = _leer_pacientes_raw()
+            criterio = sort_var.get()
+            keyfunc = _key_nombre_az if "A → Z" in criterio else _key_nombre_za
+            pacientes_ordenados = quick_sort(pacientes, key=keyfunc)
+            for p in pacientes_ordenados:
+                tree.insert("", tk.END, values=(p["id"], p["nombre"], p["correo"], p["edad"], p["dpi"], p["numero"]))
         except Exception as exc:
             messagebox.showerror("Error DB", f"No se pudo cargar pacientes:\n{exc}")
 
@@ -761,6 +796,7 @@ def ventana_pacientes() -> None:
 
     tree.bind("<Double-1>", abrir_detalle)
     cargar_pacientes()
+
 
 
 def abrir_detalle_paciente(paciente: Tuple[int, str, str, Optional[int], Optional[int], str]) -> None:
@@ -957,7 +993,7 @@ def ver_calendario() -> None:
 
 
 def menu_principal(usuario: str, rol: str) -> None:
-    global ventana_principal  # noqa: PLW0603
+    global ventana_principal 
 
     try:
         ventana_principal.destroy()
